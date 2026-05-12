@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill *)",
+      "Bash(curl -sS -o /dev/null -w \"Frontend HTTP %{http_code}\\\\n\" http://localhost:3000)"
+    ]
+  }
+}
