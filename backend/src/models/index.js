@@ -8,6 +8,8 @@ const ClubMember = require("./ClubMember");
 const Activity = require("./Activity");
 const Approval = require("./Approval");
 const FinancialRecord = require("./FinancialRecord");
+const PersonalTask = require("./PersonalTask");
+const ClubTask = require("./ClubTask");
 
 Tenant.hasMany(TenantMembership, {
   foreignKey: "tenant_id",
@@ -169,6 +171,22 @@ FinancialRecord.belongsTo(User, {
   as: "creator",
 });
 
+Tenant.hasMany(PersonalTask, { foreignKey: "tenant_id", as: "personalTasks" });
+PersonalTask.belongsTo(Tenant, { foreignKey: "tenant_id", as: "tenant" });
+User.hasMany(PersonalTask, { foreignKey: "user_id", as: "personalTasks" });
+PersonalTask.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+Tenant.hasMany(ClubTask, { foreignKey: "tenant_id", as: "clubTasks" });
+ClubTask.belongsTo(Tenant, { foreignKey: "tenant_id", as: "tenant" });
+Club.hasMany(ClubTask, { foreignKey: "club_id", as: "clubTasks" });
+ClubTask.belongsTo(Club, { foreignKey: "club_id", as: "club" });
+Activity.hasMany(ClubTask, { foreignKey: "activity_id", as: "clubTasks" });
+ClubTask.belongsTo(Activity, { foreignKey: "activity_id", as: "activity" });
+User.hasMany(ClubTask, { foreignKey: "assignee_id", as: "assignedTasks" });
+ClubTask.belongsTo(User, { foreignKey: "assignee_id", as: "assignee" });
+User.hasMany(ClubTask, { foreignKey: "created_by", as: "createdClubTasks" });
+ClubTask.belongsTo(User, { foreignKey: "created_by", as: "creator" });
+
 const db = {
   sequelize,
   Sequelize,
@@ -180,6 +198,8 @@ const db = {
   Activity,
   Approval,
   FinancialRecord,
+  PersonalTask,
+  ClubTask,
 };
 
 module.exports = db;

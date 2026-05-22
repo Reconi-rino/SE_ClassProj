@@ -62,7 +62,10 @@ function logAuditEvent({ req, action, outcome, actor, tenant, target, metadata }
     fs.mkdirSync(directory, { recursive: true });
     fs.appendFileSync(filePath, `${logLine}\n`, { encoding: "utf8" });
   } catch (error) {
-    console.error("Failed to persist audit log:", error.message);
+    process.stderr.write(JSON.stringify({
+      level: "error", message: "Failed to persist audit log",
+      error: error.message, action, timestamp: new Date().toISOString(),
+    }) + "\n");
   }
 }
 

@@ -1,23 +1,6 @@
 const { Op } = require("sequelize");
 const { sequelize, Club, ClubMember, TenantMembership, User } = require("../models");
-
-class ApiError extends Error {
-  constructor(status, code, message, details = null) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
-
-function parsePositiveInt(value) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-}
+const { ApiError, parsePositiveInt } = require("../utils/common");
 
 async function ensureClub(tenantId, clubId) {
   const id = parsePositiveInt(clubId);
@@ -161,6 +144,9 @@ async function updateClub({ tenantId, clubId, payload }) {
   }
   if (typeof payload.status !== "undefined") {
     updates.status = payload.status;
+  }
+  if (typeof payload.cover_image_url !== "undefined") {
+    updates.cover_image_url = payload.cover_image_url || null;
   }
 
   if (Object.keys(updates).length === 0) {

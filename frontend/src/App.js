@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import { useAuth } from "./contexts/AuthContext";
+import HomePage from "./pages/Public/HomePage";
+import PublicClubDetailPage from "./pages/Public/ClubDetailPage";
 import LoginPage from "./components/Auth/LoginPage";
 import RegisterPage from "./components/Auth/RegisterPage";
 import ResetPasswordPage from "./components/Auth/ResetPasswordPage";
@@ -18,6 +20,9 @@ import ApprovalPage from "./pages/Activities/ApprovalPage";
 import FinancialDashboardPage from "./pages/Finance/FinancialDashboardPage";
 import FinancialFormPage from "./pages/Finance/FinancialFormPage";
 import FinancialPublicPage from "./pages/Finance/FinancialPublicPage";
+import TodoListPage from "./pages/Todos/TodoListPage";
+import ClubTaskListPage from "./pages/ClubTasks/ClubTaskListPage";
+import ClubTaskFormPage from "./pages/ClubTasks/ClubTaskFormPage";
 
 function App() {
   const { isAuthenticated, user } = useAuth();
@@ -27,17 +32,13 @@ function App() {
     <BrowserRouter>
       <div className="app">
         <Routes>
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
-          <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />} />
-          <Route
-            path="/reset-password"
-            element={
-              <ProtectedRoute>
-                <ResetPasswordPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* 公开页面 — 无需登录 */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/club/:id" element={<PublicClubDetailPage />} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/admin" replace /> : <LoginPage />} />
+          <Route path="/register" element={isAuthenticated ? <Navigate to="/admin" replace /> : <RegisterPage />} />
 
+          {/* 管理后台 — 需要登录 */}
           <Route
             element={
               <ProtectedRoute>
@@ -45,19 +46,27 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/clubs" element={<ClubListPage />} />
-            <Route path="/clubs/new" element={<CreateClubPage />} />
-            <Route path="/clubs/:id" element={<ClubDetailPage />} />
-            <Route path="/clubs/:clubId/members" element={<ClubMembersPage />} />
-            <Route path="/activities" element={<ActivityListPage />} />
-            <Route path="/activities/new" element={<ActivityFormPage />} />
-            <Route path="/activities/:id" element={<ActivityDetailPage />} />
-            <Route path="/approvals" element={<ApprovalPage />} />
-            <Route path="/finance" element={<FinancialDashboardPage />} />
-            <Route path="/finance/new" element={<FinancialFormPage />} />
-            <Route path="/finance/public" element={<FinancialPublicPage />} />
+            <Route path="/admin" element={<DashboardPage />} />
+            <Route path="/admin/clubs" element={<ClubListPage />} />
+            <Route path="/admin/clubs/new" element={<CreateClubPage />} />
+            <Route path="/admin/clubs/:id" element={<ClubDetailPage />} />
+            <Route path="/admin/clubs/:clubId/members" element={<ClubMembersPage />} />
+            <Route path="/admin/activities" element={<ActivityListPage />} />
+            <Route path="/admin/activities/new" element={<ActivityFormPage />} />
+            <Route path="/admin/activities/:id" element={<ActivityDetailPage />} />
+            <Route path="/admin/approvals" element={<ApprovalPage />} />
+            <Route path="/admin/finance" element={<FinancialDashboardPage />} />
+            <Route path="/admin/finance/new" element={<FinancialFormPage />} />
+            <Route path="/admin/finance/public" element={<FinancialPublicPage />} />
+            <Route path="/admin/todos" element={<TodoListPage />} />
+            <Route path="/admin/club-tasks" element={<ClubTaskListPage />} />
+            <Route path="/admin/club-tasks/new" element={<ClubTaskFormPage />} />
+            <Route path="/admin/club-tasks/:id/edit" element={<ClubTaskFormPage />} />
           </Route>
+
+          <Route path="/reset-password" element={
+            <ProtectedRoute><ResetPasswordPage /></ProtectedRoute>
+          } />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -274,7 +274,6 @@ async function ensureDefaultAdmin() {
     force_password_reset: true,
   });
 
-  console.log(`Default admin created: ${DEFAULT_ADMIN_EMAIL} / ${DEFAULT_ADMIN_PASSWORD}`);
 }
 
 function me(req, res) {

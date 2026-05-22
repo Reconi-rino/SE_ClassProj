@@ -4,7 +4,12 @@
       "Bash(npm run *)",
       "Bash(lsof -ti:3000)",
       "Bash(xargs kill *)",
-      "Bash(curl -sS -o /dev/null -w \"Frontend HTTP %{http_code}\\\\n\" http://localhost:3000)"
+      "Bash(curl -sS -o /dev/null -w \"Frontend HTTP %{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(npm test *)",
+      "Bash(curl -sS http://localhost:3001/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@ccms.local\",\"password\":\"Admin@123456\"}')",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -sS -o /dev/null -w \"Frontend: HTTP %{http_code}\\\\n\" http://localhost:3000)"
     ]
-  }
+  },
+  "prefersReducedMotion": false
 }

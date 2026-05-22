@@ -46,14 +46,16 @@ router.patch(
       const hasField =
         Object.prototype.hasOwnProperty.call(value, "name") ||
         Object.prototype.hasOwnProperty.call(value, "description") ||
-        Object.prototype.hasOwnProperty.call(value, "status");
+        Object.prototype.hasOwnProperty.call(value, "status") ||
+        Object.prototype.hasOwnProperty.call(value, "cover_image_url");
       if (!hasField) {
-        throw new Error("At least one field is required: name, description, status");
+        throw new Error("At least one field is required: name, description, status, cover_image_url");
       }
       return true;
     }),
     body("name").optional().isString().trim().isLength({ min: 2, max: 150 }),
     body("description").optional({ nullable: true }).isString().isLength({ max: 5000 }),
+    body("cover_image_url").optional({ nullable: true }).isString().isLength({ max: 500 }),
     body("status").optional().isIn(["active", "inactive", "archived"]),
   ],
   authorize("update", "club"),

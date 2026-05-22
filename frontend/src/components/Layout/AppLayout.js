@@ -1,54 +1,70 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { getTenantCode, setTenantCode } from "../../services/tenantStore";
 import {
   IconHome, IconBuilding, IconCalendar, IconCheckCircle, IconDollar, IconSparkle,
-  IconPlus, IconEye, IconLogout, IconArrowLeft, IconArrowRight, IconSun, IconMoon
+  IconPlus, IconEye, IconFile, IconLogout, IconArrowLeft, IconArrowRight, IconSun, IconMoon
 } from "../Common/Icons";
 
 const navSections = [
   {
     label: "概览",
     items: [
-      { to: "/", label: "首页", icon: IconHome, end: true },
+      { to: "/admin", label: "控制台", icon: IconHome, end: true },
     ],
   },
   {
     label: "社团管理",
     items: [
-      { to: "/clubs", label: "社团列表", icon: IconBuilding },
-      { to: "/clubs/new", label: "创建社团", icon: IconPlus },
+      { to: "/admin/clubs", label: "社团列表", icon: IconBuilding },
+      { to: "/admin/clubs/new", label: "创建社团", icon: IconPlus },
     ],
   },
   {
     label: "活动管理",
     items: [
-      { to: "/activities", label: "活动列表", icon: IconCalendar },
-      { to: "/activities/new", label: "创建活动", icon: IconSparkle },
-      { to: "/approvals", label: "审批中心", icon: IconCheckCircle },
+      { to: "/admin/activities", label: "活动列表", icon: IconCalendar },
+      { to: "/admin/activities/new", label: "创建活动", icon: IconSparkle },
+      { to: "/admin/approvals", label: "审批中心", icon: IconCheckCircle },
+    ],
+  },
+  {
+    label: "个人任务",
+    items: [
+      { to: "/admin/todos", label: "我的待办", icon: IconCheckCircle },
+    ],
+  },
+  {
+    label: "任务管理",
+    items: [
+      { to: "/admin/club-tasks", label: "社团任务", icon: IconFile },
+      { to: "/admin/club-tasks/new", label: "发布任务", icon: IconPlus },
     ],
   },
   {
     label: "财务管理",
     items: [
-      { to: "/finance", label: "财务仪表盘", icon: IconDollar },
-      { to: "/finance/new", label: "新增流水", icon: IconPlus },
-      { to: "/finance/public", label: "财务公开", icon: IconEye },
+      { to: "/admin/finance", label: "财务仪表盘", icon: IconDollar },
+      { to: "/admin/finance/new", label: "新增流水", icon: IconPlus },
+      { to: "/admin/finance/public", label: "财务公开", icon: IconEye },
     ],
   },
 ];
 
 const breadcrumbMap = {
-  "/": "首页",
-  "/clubs": "社团列表",
-  "/clubs/new": "创建社团",
-  "/activities": "活动列表",
-  "/activities/new": "创建活动",
-  "/approvals": "审批中心",
-  "/finance": "财务仪表盘",
-  "/finance/new": "新增流水",
-  "/finance/public": "财务公开",
+  "/admin": "控制台",
+  "/admin/clubs": "社团列表",
+  "/admin/clubs/new": "创建社团",
+  "/admin/activities": "活动列表",
+  "/admin/activities/new": "创建活动",
+  "/admin/approvals": "审批中心",
+  "/admin/finance": "财务仪表盘",
+  "/admin/finance/new": "新增流水",
+  "/admin/finance/public": "财务公开",
+  "/admin/todos": "我的待办",
+  "/admin/club-tasks": "社团任务",
+  "/admin/club-tasks/new": "发布任务",
 };
 
 const roleLabels = {
@@ -70,7 +86,7 @@ function AppLayout() {
     localStorage.setItem("ccms_theme", theme);
   }, [theme]);
 
-  const currentLabel = breadcrumbMap[location.pathname] || "";
+  const currentLabel = breadcrumbMap[location.pathname] || location.pathname;
 
   const tenantHint = useMemo(() => tenantCode || "未设置", [tenantCode]);
 
@@ -87,10 +103,12 @@ function AppLayout() {
   return (
     <div className="app-shell">
       <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
-        <div className="sidebar-brand">
-          <div className="sidebar-brand-mark">C</div>
-          <span className="sidebar-brand-name">CCMS</span>
-        </div>
+        <Link to="/admin" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="sidebar-brand">
+            <div className="sidebar-brand-mark">C</div>
+            <span className="sidebar-brand-name">CCMS</span>
+          </div>
+        </Link>
 
         <nav className="sidebar-nav">
           {navSections.map((section) => (
@@ -149,7 +167,9 @@ function AppLayout() {
           <div className="topbar-left">
             {currentLabel && (
               <div className="breadcrumb">
-                <a href="/">CCMS</a>
+                <Link to="/" style={{ color: "inherit", textDecoration: "none" }}>首页</Link>
+                <span className="breadcrumb-sep">/</span>
+                <Link to="/admin" style={{ color: "inherit", textDecoration: "none" }}>管理后台</Link>
                 <span className="breadcrumb-sep">/</span>
                 <span className="breadcrumb-current">{currentLabel}</span>
               </div>

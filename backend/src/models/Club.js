@@ -25,6 +25,10 @@ const Club = sequelize.define(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
     },
+    cover_image_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
     status: {
       type: DataTypes.ENUM("active", "inactive", "archived"),
       allowNull: false,

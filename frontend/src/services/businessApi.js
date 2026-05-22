@@ -83,3 +83,47 @@ export function getFinancialReports({ token, tenantCode, year }) {
 export function getFinancialPublicRecords({ tenantCode, month }) {
   return apiRequest("/financial-records/reports/monthly", { tenantCode, query: { month } });
 }
+
+export function listPersonalTasks({ token, tenantCode, status, priority }) {
+  return apiRequest("/todos", { token, tenantCode, query: { status, priority } });
+}
+
+export function getPersonalTask({ token, tenantCode, id }) {
+  return apiRequest(`/todos/${id}`, { token, tenantCode });
+}
+
+export function createPersonalTask({ token, tenantCode, payload }) {
+  return apiRequest("/todos", { token, tenantCode, method: "POST", body: payload });
+}
+
+export function updatePersonalTask({ token, tenantCode, id, payload }) {
+  return apiRequest(`/todos/${id}`, { token, tenantCode, method: "PATCH", body: payload });
+}
+
+export function deletePersonalTask({ token, tenantCode, id }) {
+  return apiRequest(`/todos/${id}`, { token, tenantCode, method: "DELETE" });
+}
+
+export function listClubTasks({ token, tenantCode, clubId, assigneeId, status }) {
+  return apiRequest("/club-tasks", { token, tenantCode, query: { club_id: clubId, assignee_id: assigneeId, status } });
+}
+
+export function listMyClubTasks({ token, tenantCode }) {
+  return apiRequest("/club-tasks/my", { token, tenantCode });
+}
+
+export function getClubTask({ token, tenantCode, id, clubId }) {
+  return apiRequest(`/club-tasks/${id}`, { token, tenantCode, query: clubId ? { club_id: clubId } : undefined });
+}
+
+export function createClubTask({ token, tenantCode, payload }) {
+  return apiRequest("/club-tasks", { token, tenantCode, method: "POST", body: payload });
+}
+
+export function updateClubTask({ token, tenantCode, id, payload }) {
+  return apiRequest(`/club-tasks/${id}`, { token, tenantCode, method: "PATCH", body: payload });
+}
+
+export function deleteClubTask({ token, tenantCode, id, clubId }) {
+  return apiRequest(`/club-tasks/${id}`, { token, tenantCode, method: "DELETE", query: { club_id: clubId } });
+}

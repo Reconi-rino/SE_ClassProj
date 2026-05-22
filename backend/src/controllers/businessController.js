@@ -1,21 +1,7 @@
 const { TenantMembership } = require("../models");
 const { isTenantGuardError, tenantCreatePayload, tenantQueryOptions } = require("../utils/tenantGuard");
-
-function toTenantSafeError(res, error) {
-  return res.status(error.status || 400).json({
-    success: false,
-    message: error.message || "Invalid tenant context.",
-    code: error.code || "TENANT_CONTEXT_INVALID",
-  });
-}
-
-function parsePositiveInt(value) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-}
+const { parsePositiveInt } = require("../utils/common");
+const { toTenantSafeError } = require("../utils/errorResponse");
 
 async function listTenantMemberships(req, res, next) {
   try {
