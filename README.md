@@ -104,7 +104,7 @@ router.patch(
 - 区分认证与授权：`requireAuth` 负责 `401`，`authorize` 负责 `403`
 - 租户优先：租户资源在缺少 `req.tenant` 时拒绝；跨租户资源访问拒绝
 - 兼容现有角色：保留 `system_admin` 高权限；`student` 映射为 `member` 参与策略扩展
-
+- 可以玩原神
 ## 运维与发布文档
 
 - 运维 Runbook（健康检查分级、Trace/Correlation ID 策略、备份恢复）：`docs/OPERABILITY_RUNBOOK.md`
