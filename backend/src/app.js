@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
 const sequelize = require("./config/database");
 const authRoutes = require("./routes/auth.routes");
 const businessRoutes = require("./routes/business.routes");
@@ -17,8 +18,6 @@ const PORT = process.env.PORT || 3001;
 
 function createApp() {
   const app = express();
-
-const path = require("path");
 
   app.use(cors());
   app.use(express.json());
