@@ -153,6 +153,20 @@ const POLICY = {
       allowClubRoles: ["founder", "admin"],
     },
   },
+  tenant: {
+    read: {
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+    },
+    create: {
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+    },
+    update: {
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+    },
+    delete: {
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+    },
+  },
   personal_task: {
     read: {
       allowTenantRoles: ["tenant_admin", "member"],

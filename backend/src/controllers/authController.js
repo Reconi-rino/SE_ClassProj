@@ -259,22 +259,44 @@ async function resetPassword(req, res) {
   });
 }
 
+const DEFAULT_TENANT_NAME = process.env.DEFAULT_TENANT_NAME || "默认租户";
+const DEFAULT_TENANT_CODE = process.env.DEFAULT_TENANT_CODE || "default";
+
 async function ensureDefaultAdmin() {
   const existing = await User.findOne({ where: { email: DEFAULT_ADMIN_EMAIL } });
   if (existing) {
     return;
   }
 
-  const password_hash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, SALT_ROUNDS);
-  await User.create({
-    username: DEFAULT_ADMIN_USERNAME,
-    email: DEFAULT_ADMIN_EMAIL,
-    student_id: DEFAULT_ADMIN_STUDENT_ID,
-    password_hash,
-    role: "system_admin",
-    force_password_reset: true,
-  });
+  const transaction = await sequelize.transaction();
+  try {
+    const password_hash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, SALT_ROUNDS);
+    const user = await User.create({
+      username: DEFAULT_ADMIN_USERNAME,
+      email: DEFAULT_ADMIN_EMAIL,
+      student_id: DEFAULT_ADMIN_STUDENT_ID,
+      password_hash,
+      role: "system_admin",
+      force_password_reset: true,
+    }, { transaction });
 
+    const [tenant] = await Tenant.findOrCreate({
+      where: { code: DEFAULT_TENANT_CODE },
+      defaults: { name: DEFAULT_TENANT_NAME, code: DEFAULT_TENANT_CODE, status: "active" },
+      transaction,
+    });
+
+    await TenantMembership.findOrCreate({
+      where: { tenant_id: tenant.id, user_id: user.id },
+      defaults: { role: "tenant_admin" },
+      transaction,
+    });
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 function me(req, res) {
