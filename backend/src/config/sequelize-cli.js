@@ -8,6 +8,16 @@ const common = {
   port: Number(process.env.DB_PORT || 3306),
   dialect: "mysql",
   logging: false,
+  ...(process.env.DB_SSL !== "false"
+    ? {
+        dialectOptions: {
+          ssl: {
+            require: true,
+            rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
+          },
+        },
+      }
+    : {}),
 };
 
 module.exports = {
