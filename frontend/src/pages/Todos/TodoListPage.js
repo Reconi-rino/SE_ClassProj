@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { listPersonalTasks, createPersonalTask, updatePersonalTask, deletePersonalTask, listMyClubTasks, updateClubTask } from "../../services/businessApi";
 import { getTenantCode } from "../../services/tenantStore";
+import { useToast } from "../../contexts/ToastContext";
 import FeedbackMessage from "../../components/Common/FeedbackMessage";
 import LoadingState from "../../components/Common/LoadingState";
 import { getUserFacingError } from "../../utils/errorMessage";
@@ -13,6 +14,7 @@ const STATUS_COLORS = { pending: "badge-gray", in_progress: "badge", completed: 
 
 function TodoListPage() {
   const { token } = useAuth();
+  const { toast } = useToast();
   const [personalTasks, setPersonalTasks] = useState([]);
   const [clubTasks, setClubTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,7 @@ function TodoListPage() {
     setError("");
     try {
       await createPersonalTask({ token, tenantCode, payload: form });
+      toast("任务已创建", "success");
       resetForm();
       await load();
     } catch (err) {
@@ -67,6 +70,7 @@ function TodoListPage() {
     setError("");
     try {
       await updatePersonalTask({ token, tenantCode, id: editTask.id, payload: form });
+      toast("任务已更新", "success");
       resetForm();
       await load();
     } catch (err) {
@@ -78,6 +82,7 @@ function TodoListPage() {
     const next = task.status === "pending" ? "in_progress" : task.status === "in_progress" ? "completed" : "pending";
     try {
       await updatePersonalTask({ token, tenantCode, id: task.id, payload: { status: next } });
+      toast("状态已更新", "success");
       await load();
     } catch (err) {
       setError(getUserFacingError(err, "更新状态失败。"));
@@ -88,6 +93,7 @@ function TodoListPage() {
     const next = task.status === "pending" ? "in_progress" : task.status === "in_progress" ? "completed" : "pending";
     try {
       await updateClubTask({ token, tenantCode, id: task.id, payload: { club_id: task.club_id, status: next } });
+      toast("任务状态已更新", "success");
       await load();
     } catch (err) {
       setError(getUserFacingError(err, "更新状态失败。"));
@@ -98,6 +104,7 @@ function TodoListPage() {
     if (!window.confirm("确定要删除该任务吗？")) return;
     try {
       await deletePersonalTask({ token, tenantCode, id: task.id });
+      toast("任务已删除", "success");
       await load();
     } catch (err) {
       setError(getUserFacingError(err, "删除任务失败。"));

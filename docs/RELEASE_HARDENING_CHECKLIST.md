@@ -84,5 +84,8 @@ npm run db:migrate:undo
 
 - [ ] `GET /api/health` 正常
 - [ ] 核心登录链路（register/login/me）可用
-- [ ] 关键业务接口（clubs / business / financial）抽样验证
+- [ ] 关键业务接口抽样：clubs / activities / approvals / financial / todos / club-tasks
+- [ ] 公开页面可访问：`/`（首页）、`/club/:id`（社团详情）
+- [ ] 管理页面需登录：`/admin/*` 均需认证
+- [ ] 最近一次代码审查问题已清零（参考 `docs/CODE_REVIEW_20260522.md`）
 - [ ] 监控与日志中无新增高频 5xx

@@ -155,7 +155,7 @@
 }
 
 /* ===== Content Body ===== */
-.content-body { flex: 1; padding: 36px 40px; }
+.content-body { flex: 1; padding: 36px 40px; animation: fadeIn var(--duration-normal) var(--ease-apple); }
 .container { max-width: 1080px; margin: 0 auto; }
 
 /* ===== Page Header ===== */

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { getClubTask, createClubTask, updateClubTask, listClubMembers, listClubs } from "../../services/businessApi";
 import { getTenantCode } from "../../services/tenantStore";
+import { useToast } from "../../contexts/ToastContext";
 import FeedbackMessage from "../../components/Common/FeedbackMessage";
 import LoadingState from "../../components/Common/LoadingState";
 import { getUserFacingError } from "../../utils/errorMessage";
@@ -11,6 +12,7 @@ function ClubTaskFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const { token } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const tenantCode = getTenantCode();
 
@@ -94,8 +96,8 @@ function ClubTaskFormPage() {
       } else {
         await createClubTask({ token, tenantCode, payload });
       }
-      setSuccess(isEdit ? "任务已更新。" : "任务已创建。");
-      setTimeout(() => navigate("/admin/club-tasks"), 1000);
+      toast(isEdit ? "任务已更新" : "任务已创建", "success");
+      setTimeout(() => navigate("/admin/club-tasks"), 800);
     } catch (e) {
       setError(getUserFacingError(e, "提交失败。"));
     } finally {

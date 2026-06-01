@@ -39,4 +39,14 @@ router.patch(
 
 router.delete("/:id", [param("id").isInt({ min: 1 })], authorize("delete", "personal_task"), taskController.deleteTask);
 
+const attachmentController = require("../controllers/attachmentController");
+
+// Set taskType middleware for todo attachments
+function setTaskType(type) {
+  return (req, res, next) => { req.params.taskType = type; next(); };
+}
+router.get("/:id/attachments", setTaskType("personal"), attachmentController.listAttachments);
+router.post("/:id/attachments", setTaskType("personal"), attachmentController.uploadFile);
+router.get("/:id/attachments/download", setTaskType("personal"), attachmentController.downloadAttachments);
+
 module.exports = router;

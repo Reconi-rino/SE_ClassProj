@@ -70,8 +70,10 @@ resolveTenantContext (global) → requireAuth → requireTenantContext → autho
 - **`middleware/`** — `auth.middleware`, `tenant.middleware`, `authorize.middleware`.
 - **`policies/`** — `authorization.policy.js` (role/permission matrix) and `resource.resolver.js` (looks up target resource for cross-tenant checks).
 - **`utils/tenantGuard.js`** — Programmatic tenant safety: `tenantQueryOptions()`, `tenantCreatePayload()` to enforce `tenant_id` filtering on Sequelize queries.
+- **`utils/common.js`** — Shared `ApiError` class and `parsePositiveInt()` helper.
+- **`utils/errorResponse.js`** — Centralized error handling: `handleServiceError()`, `handleRequestValidation()`, `toErrorResponse()`. All controllers import from here — no local duplicates.
 
-### Core domain models & associations
+### Core domain models & associations (10 models)
 
 ```
 Tenant ──< TenantMembership >── User
@@ -80,6 +82,10 @@ Club   ──< ClubMember >── User
 Club   ──< Activity >── User (creator)
 Activity ──< Approval >── User (approver)
 Club   ──< FinancialRecord >── User (creator)
+Tenant ──< PersonalTask >── User          (personal todo list)
+Club   ──< ClubTask >── User (assignee)
+Club   ──< ClubTask >── User (creator)    (club task publishing)
+Activity ──< ClubTask                     (optional activity link)
 ```
 
 Every business table carries `tenant_id`. Models are in `backend/src/models/`, associations defined in `models/index.js`.
@@ -92,23 +98,33 @@ Every business table carries `tenant_id`. Models are in `backend/src/models/`, a
 
 ### Frontend
 
-- **`AuthContext`** — Central auth state (token in localStorage key `ccms_token`, user object). Provides `login`, `register`, `logout`, `resetPassword`.
+- **`AuthContext`** — Central auth state (token in localStorage key `ccms_token`, user object). Provides `login`, `register`, `logout`, `resetPassword`. Login redirects to `/admin`.
 - **`services/apiClient.js`** — `apiRequest()` wrapper around `fetch`. Automatically attaches `Authorization` and `x-tenant-code` headers.
 - **`services/`** — Domain-specific API callers (`authApi`, `businessApi`, `tenantApi`).
-- **Pages** in `pages/` organized by domain (Activities, Clubs, Finance). Shared UI in `components/Common/`.
+- **Pages** in `pages/` organized by domain: `Public/` (homepage, club detail), `Clubs/`, `Activities/`, `Finance/`, `Todos/`, `ClubTasks/`. Shared UI in `components/Common/`.
+
+### Route structure (public vs admin)
+
+- **`/`** — Public homepage with hero + club card grid (no auth)
+- **`/club/:id`** — Public club detail page (cover image, stats, recent activities)
+- **`/login`, `/register`** — Auth pages, redirect to `/admin` if already logged in
+- **`/admin/*`** — All management pages behind `ProtectedRoute` + `AppLayout` sidebar
+- Backend mirrors this: `/api/public/*` routes skip `requireAuth`; `/api/*` management routes require full auth chain
 
 ### Database
 
 - **Dev/Prod**: MySQL or MariaDB (Sequelize uses `mysql2` dialect)
 - **Test**: SQLite in-memory (`DB_DIALECT=sqlite`, `DB_STORAGE=:memory:`)
 - Switch via `DB_DIALECT` env var — no code changes needed. See `backend/src/config/database.js`.
+- **12 migrations** (8 schema + 4 feature extensions), **10 models**
 
 ### Testing
 
 - Jest with `testEnvironment: "node"`. Test files in `backend/tests/unit/` and `backend/tests/integration/`.
 - `backend/tests/setup.js` sets env vars for test (SQLite, test JWT secret, default admin creds).
 - `tests/helpers/testDb.js` provides `syncTestDatabase()` (force-recreate tables) and `closeTestDatabase()`.
-- Frontend tests in `src/__tests__/` using React Testing Library.
+- `tests/helpers/testData.js` provides factory functions: `createTenant()`, `createUser()`, `createClub()`, `signToken()`.
+- 7 test suites, 54 test cases. Frontend tests in `src/__tests__/` using React Testing Library.
 
 ## Environment variables
 
@@ -125,3 +141,7 @@ Copy `backend/.env.example` to `backend/.env`. Required:
 - `express-validator` chains should use `.bail()` after type-check validators to avoid cascading noise.
 - All frontend API errors are shown via Chinese-localized messages in `errorMessage.js` / `FeedbackMessage` component.
 - The `ApiError` class in services carries `{ status, code, message, details }` — controllers catch these and send structured error responses.
+- **Error handling**: All controllers import `handleServiceError` and `handleRequestValidation` from `utils/errorResponse.js`. Do not define local copies — use the shared ones.
+- **Multi-assignee pattern**: `ClubTask` uses `assignee_id` (primary) + `assignee_ids` (comma-separated string) for multi-person task assignment. The `GET /api/club-tasks/my` endpoint aggregates tasks by both fields.
+- **Public API layer**: `/api/public/*` routes use `resolveTenantContext` only (no `requireAuth`). Public frontend pages call these directly without a token.
+- **Admin route prefix**: All management pages live under `/admin/*`. Navigation links in components under `AppLayout` must use the `/admin/` prefix.

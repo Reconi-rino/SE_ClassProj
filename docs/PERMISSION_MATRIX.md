@@ -57,6 +57,13 @@ It is designed to be **implementation guidance** for `phaseb-authorize-middlewar
 | Update record | C (C1) | C (C1) | C (C1) | A (C1,C2,C4 draft/open only) | A (C1,C2,C4 draft/open only) | D |
 | Delete record | C (C1) | C (C1) | C (C1) | C (C1,C2,C4,C5) | C (C1,C2,C4,C5) | D |
 | View public financial disclosure | A | A | A (C1) | A (C1) | A (C1) | A (C1/public published only) |
+| **Personal Tasks** |||||||
+| CRUD own tasks | — | — | C (C1) | C (C1) | C (C1) | C (C1) |
+| **Club Tasks** |||||||
+| Publish club task | C (C1) | C (C1) | C (C1) | C (C1,C2) | C (C1,C2 founder/admin) | D |
+| Update/delete club task | C (C1) | C (C1) | C (C1) | C (C1,C2) | C (C1,C2 founder/admin) | D |
+| View assigned tasks | — | — | C (C1) | C (C1) | C (C1) | C (C1 own tasks only) |
+| Update own task status | — | — | C (C1) | C (C1) | C (C1) | C (C1 as assignee) |
 | **Audit log** |||||||
 | View audit log | A | A | A (C1) | C (C1,C2 own club events only) | C (C1,C2 finance events only) | D |
 | Export audit log | A (C6) | A (C6) | C (C1,C6) | D | D | D |

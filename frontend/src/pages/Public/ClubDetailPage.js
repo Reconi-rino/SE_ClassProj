@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import { apiRequest } from "../../services/apiClient";
 import { getTenantCode } from "../../services/tenantStore";
 
 function ClubDetailPage() {
   const { id } = useParams();
+  const { isAuthenticated, user, logout } = useAuth();
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,15 +65,28 @@ function ClubDetailPage() {
             }}>C</div>
             <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.02em" }}>CCMS</span>
           </Link>
-          <div style={{ display: "flex", gap: 12 }}>
-            <Link to="/login" style={{
-              color: "var(--color-text-secondary)", textDecoration: "none",
-              fontSize: 14, fontWeight: 500, padding: "6px 16px", borderRadius: 8,
-            }}>登录</Link>
-            <Link to="/register" style={{
-              background: "var(--blue)", color: "#fff", textDecoration: "none",
-              fontSize: 14, fontWeight: 600, padding: "8px 20px", borderRadius: 8,
-            }}>加入我们</Link>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {isAuthenticated ? (
+              <>
+                <Link to="/admin" style={{ color: "var(--color-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 16px", borderRadius: 8 }}>管理后台</Link>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 12px", borderRadius: 8, background: "rgba(0,0,0,0.04)" }}>
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--blue)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                      {user?.username?.slice(0, 1).toUpperCase() || "?"}
+                    </div>
+                  )}
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>{user?.username}</span>
+                </div>
+                <button onClick={logout} style={{ color: "var(--color-text-secondary)", background: "none", border: "none", fontSize: 13, cursor: "pointer", padding: "4px 8px" }}>退出</button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" style={{ color: "var(--color-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 16px", borderRadius: 8 }}>登录</Link>
+                <Link to="/register" style={{ background: "var(--blue)", color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 600, padding: "8px 20px", borderRadius: 8 }}>加入我们</Link>
+              </>
+            )}
           </div>
         </div>
       </header>

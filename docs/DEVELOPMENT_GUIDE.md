@@ -43,5 +43,22 @@
 1. 请警惕 `Object_NotFound` 与 `Unauthorized` 在跨域环境（或非跨域前端代理环境）下抛错了具体的 DB 字段问题。所有后端的 Validation Error 应该提纯转为脱敏中文给 UI 用以呈现（我们已经在前端的 `errorMessage.js` 统一封装）。
 2. 在向数据库更新关联关系前（比如插人落表），用 `findOne` 或 `findByPk` 查探实体存疑不仅能提高友好度，还能避免数据库层直接因为外键约束失败而抛出含有 Table Schema 信息的 Internal Server Error。
 
+## 五、 公开页面与管理后台分离
+
+### 1. 路由分离原则
+- 公开页面（首页、社团详情）使用 `/` 和 `/club/:id`，不走 `ProtectedRoute`
+- 管理功能统一挂载 `/admin/*` 下，由 `AppLayout` 提供侧边栏
+- 所有内部链接必须使用 `/admin/` 前缀，否则会 404
+
+### 2. 后端对应
+- `/api/public/*` 仅使用 `resolveTenantContext`，不要求认证
+- `/api/*` 管理路由需要完整的 `requireAuth → requireTenantContext → authorize`
+
+## 六、 错误处理集中化
+
+- 所有 controller 从 `utils/errorResponse.js` import `handleServiceError` 和 `handleRequestValidation`
+- 不要在各 controller 中本地定义这些函数
+- `handleServiceError` 统一识别 `ApiError`、`UniqueConstraintError`、`ValidationError`
+
 ---
-最后更新于：2026-04-28
+最后更新于：2026-05-22

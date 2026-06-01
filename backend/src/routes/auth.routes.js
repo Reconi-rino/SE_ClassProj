@@ -60,4 +60,6 @@ router.post(
 
 router.get("/me", requireAuth, authController.me);
 
+router.post("/avatar", requireAuth, authController.uploadAvatar);
+
 module.exports = router;

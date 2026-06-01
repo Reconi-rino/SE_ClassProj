@@ -10,6 +10,7 @@ const Approval = require("./Approval");
 const FinancialRecord = require("./FinancialRecord");
 const PersonalTask = require("./PersonalTask");
 const ClubTask = require("./ClubTask");
+const TaskAttachment = require("./TaskAttachment");
 
 Tenant.hasMany(TenantMembership, {
   foreignKey: "tenant_id",
@@ -200,6 +201,7 @@ const db = {
   FinancialRecord,
   PersonalTask,
   ClubTask,
+  TaskAttachment,
 };
 
 module.exports = db;

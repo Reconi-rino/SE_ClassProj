@@ -113,3 +113,46 @@ curl 正常不代表浏览器请求一定正常（请求头、CORS、封装逻�
 - **简单的属性改写**可用 `PATCH`。
 - **引发伴生记录创建和状态扭转的**，必须设立独立的 action 挂载点，例如：`POST /activities/:id/submit-approval` 和 `POST /approvals/:id/decision`。
 - 前端按钮发出的指令载体需要严格对齐端点语义，不能试图走后门更新模型状态位。
+
+## 11. 错误处理必须集中收敛
+
+### 问题
+`handleServiceError` 和 `handleRequestValidation` 在 6 个 controller 中完全重复定义。`businessController` 仍使用旧模式的 `toTenantSafeError`，与其他 controller 不一致。
+
+### 结论
+- 所有错误处理函数统一收敛至 `utils/errorResponse.js`
+- 所有 controller 从此文件 import，不再本地定义
+- 新增 controller 必须遵循此模式
+
+## 12. 公开与管理路由分离
+
+### 问题
+初期 `/` 直接是登录页，未登录用户看不到任何内容。
+
+### 结论
+- 公开页面（首页、社团详情）使用 `/` 和 `/club/:id`，不走 `ProtectedRoute`
+- 管理功能统一挂载在 `/admin/*` 下
+- 后端对应 `/api/public/*`（无需认证）和 `/api/*`（需要 auth 链）
+- 所有内部导航链接必须使用 `/admin/` 前缀
+
+## 13. 新增资源类型的标准流程
+
+添加新资源（如 `PersonalTask`、`ClubTask`）需经过完整的 10 步流程：
+migration → model → index.js 注册 → service → controller → routes → app.js 挂载 → policy → resolver → 前端
+
+缺少任何一步都会导致功能不完整。
+
+## 14. 封面图字段的后向兼容
+
+### 问题
+新增 `cover_image_url` 字段时，club PATCH validator 不接受该字段，导致封面图更新被拒。
+
+### 结论
+- 新增字段必须同步更新 route validator 的 `body().custom()` 校验
+- Service 的 `updateClub` 也需要显式处理新字段
+- 前端无封面时显示渐变占位，不应报错
+
+## 最近更新
+
+- 2026-05-22：代码审查通过并修复 11 个问题。错误处理统一收敛。财务路由授权加固。全部文档对齐当前进度。
+- 2026-04-28：修复多租户越权和前后端状态机 Bug。完整 UI 回归测试通过。

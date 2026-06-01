@@ -18,9 +18,14 @@ const PORT = process.env.PORT || 3001;
 function createApp() {
   const app = express();
 
+const path = require("path");
+
   app.use(cors());
   app.use(express.json());
   app.use(resolveTenantContext);
+
+  // 静态文件服务：上传的文件
+  app.use("/uploads", express.static(path.resolve(__dirname, "..", "uploads")));
 
   app.get("/api/health", (req, res) => {
     res.json({

@@ -48,6 +48,10 @@ const User = sequelize.define(
       allowNull: false,
       defaultValue: "student",
     },
+    avatar_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
   },
   {
     tableName: "users",

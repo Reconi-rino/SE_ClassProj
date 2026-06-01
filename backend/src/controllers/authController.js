@@ -4,6 +4,7 @@ const { validationResult } = require("express-validator");
 const { User, Tenant, TenantMembership } = require("../models");
 const sequelize = require("../config/database");
 const { logAuditEvent } = require("../utils/auditLogger");
+const { uploadAvatar: uploadAvatarMw, handleMulterError } = require("../utils/upload");
 
 const SALT_ROUNDS = 10;
 const DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || "admin@ccms.local";
@@ -283,10 +284,45 @@ function me(req, res) {
   });
 }
 
+function uploadAvatar(req, res) {
+  uploadAvatarMw(req, res, (err) => {
+    if (err) return handleMulterError(err, req, res, () => {});
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "请选择要上传的文件" });
+    }
+
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+
+    User.findByPk(req.user.id).then((user) => {
+      if (!user) return res.status(404).json({ success: false, message: "用户不存在" });
+      return user.update({ avatar_url: avatarUrl });
+    }).then((user) => {
+      return res.status(200).json({ success: true, data: { avatar_url: user.avatar_url } });
+    }).catch((error) => {
+      return res.status(500).json({ success: false, message: error.message });
+    });
+  });
+}
+
+// Enhance me() to return avatar_url from DB
+const _me = me;
+me = async function (req, res) {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ["id", "username", "email", "role", "student_id", "force_password_reset", "avatar_url"],
+    });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    return res.status(200).json({ success: true, data: user });
+  } catch {
+    return _me(req, res);
+  }
+};
+
 module.exports = {
   register,
   login,
   resetPassword,
   me,
+  uploadAvatar,
   ensureDefaultAdmin,
 };

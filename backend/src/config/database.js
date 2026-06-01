@@ -12,6 +12,16 @@ if (dialect === "sqlite") {
   baseOptions.host = process.env.DB_HOST || "127.0.0.1";
   baseOptions.port = Number(process.env.DB_PORT || 3306);
   baseOptions.timezone = "+08:00";
+
+  const useSSL = process.env.DB_SSL !== "false"; // 默认启用 SSL
+  if (useSSL) {
+    baseOptions.dialectOptions = {
+      ssl: {
+        require: true,
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
+      },
+    };
+  }
 }
 
 const sequelize = new Sequelize(

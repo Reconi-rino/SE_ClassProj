@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { listClubTasks, deleteClubTask } from "../../services/businessApi";
 import { getTenantCode } from "../../services/tenantStore";
+import { useToast } from "../../contexts/ToastContext";
 import FeedbackMessage from "../../components/Common/FeedbackMessage";
 import LoadingState from "../../components/Common/LoadingState";
 import { getUserFacingError } from "../../utils/errorMessage";
@@ -14,6 +15,7 @@ const STATUS_COLORS = { pending: "badge-gray", in_progress: "badge", completed: 
 
 function ClubTaskListPage() {
   const { token } = useAuth();
+  const { toast } = useToast();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -45,6 +47,7 @@ function ClubTaskListPage() {
     if (!window.confirm("确定删除该任务？")) return;
     try {
       await deleteClubTask({ token, tenantCode, id: task.id, clubId: task.club_id });
+      toast("任务已删除", "success");
       await load();
     } catch (e) {
       setError(getUserFacingError(e, "删除失败。"));
