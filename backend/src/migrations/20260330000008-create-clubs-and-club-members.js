@@ -128,12 +128,12 @@ module.exports = {
     });
 
     await queryInterface.addConstraint("club_members", {
-      fields: ["tenant_id", "club_id"],
+      fields: ["club_id"],
       type: "foreign key",
-      name: "fk_club_members_tenant_club",
+      name: "fk_club_members_club",
       references: {
         table: "clubs",
-        fields: ["tenant_id", "id"],
+        fields: ["id"],
       },
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
