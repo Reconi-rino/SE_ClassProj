@@ -6,8 +6,7 @@ const financialController = require("../controllers/financialController");
 
 const router = express.Router();
 
-// 财务公示 — 公开，仅需租户上下文
-router.get("/reports/monthly", requireTenantContext, financialController.getFinancialMonthlySummary);
+router.get("/reports/monthly", requireAuth, requireTenantContext, authorize("read", "financial_record"), financialController.getFinancialMonthlySummary);
 
 // 需要认证和授权
 router.get("/", requireAuth, requireTenantContext, authorize("read", "financial_record"), financialController.listFinancialRecords);

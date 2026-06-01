@@ -42,7 +42,7 @@ function RegisterPage() {
     setSubmitting(true);
     try {
       await register(form);
-      navigate("/", { replace: true });
+      navigate("/admin", { replace: true });
     } catch (e) {
       setError(getUserFacingError(e, "注册失败，请检查输入后重试。"));
     } finally {

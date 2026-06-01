@@ -25,7 +25,7 @@ function LoginPage() {
     setSubmitting(true);
     try {
       await login(form);
-      navigate("/", { replace: true });
+      navigate("/admin", { replace: true });
     } catch (e) {
       setError(getUserFacingError(e, "登录失败，请稍后重试。"));
     } finally {
