@@ -24,6 +24,21 @@ function TodoListPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [form, setForm] = useState({ title: "", description: "", due_date: "", priority: "medium" });
+  const [taskFiles, setTaskFiles] = useState([]);
+
+  const uploadTaskFiles = async (taskId) => {
+    if (!taskFiles.length) return;
+    for (const file of taskFiles) {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("attachment_type", "reference");
+      await fetch(`/api/todos/${taskId}/attachments`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "x-tenant-code": tenantCode },
+        body: fd,
+      }).catch(() => {});
+    }
+  };
 
   const tenantCode = getTenantCode();
 
@@ -48,6 +63,7 @@ function TodoListPage() {
 
   const resetForm = () => {
     setForm({ title: "", description: "", due_date: "", priority: "medium" });
+    setTaskFiles([]);
     setEditTask(null);
     setShowForm(false);
   };
@@ -56,8 +72,10 @@ function TodoListPage() {
     e.preventDefault();
     setError("");
     try {
-      await createPersonalTask({ token, tenantCode, payload: form });
+      const result = await createPersonalTask({ token, tenantCode, payload: form });
+      if (result?.data?.id) await uploadTaskFiles(result.data.id);
       toast("任务已创建", "success");
+      setTaskFiles([]);
       resetForm();
       await load();
     } catch (err) {
@@ -188,6 +206,15 @@ function TodoListPage() {
                   onChange={(e) => setForm({ ...form, due_date: e.target.value })}
                   style={{ width: "100%", padding: "8px 12px" }} />
               </div>
+              <div style={{ flex: 1 }}>
+                <label>附件</label>
+                <input type="file" multiple
+                  onChange={(e) => setTaskFiles([...e.target.files])}
+                  style={{ width: "100%", padding: "6px 8px", fontSize: 12 }} />
+                {taskFiles.length > 0 && <span style={{ fontSize: 11, color: "#0D9488" }}>已选 {taskFiles.length} 个文件</span>}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
               <div style={{ flex: 1 }}>
                 <label>优先级</label>
                 <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}

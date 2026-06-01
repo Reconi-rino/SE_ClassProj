@@ -28,6 +28,21 @@ function ClubTaskFormPage() {
     club_id: "", title: "", description: "",
     activity_id: "", due_date: "", priority: "medium",
   });
+  const [taskFiles, setTaskFiles] = useState([]);
+
+  const uploadTaskFiles = async (taskId) => {
+    if (!taskFiles.length) return;
+    for (const file of taskFiles) {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("attachment_type", "reference");
+      await fetch(`/api/club-tasks/${taskId}/attachments`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "x-tenant-code": tenantCode },
+        body: fd,
+      }).catch(() => {});
+    }
+  };
 
   useEffect(() => {
     listClubs({ token, tenantCode }).then((r) => {
@@ -91,11 +106,13 @@ function ClubTaskFormPage() {
         assignee_ids: selectedAssigneeIds.join(","),
         activity_id: form.activity_id ? Number(form.activity_id) : undefined,
       };
+      let result;
       if (isEdit) {
-        await updateClubTask({ token, tenantCode, id, payload });
+        result = await updateClubTask({ token, tenantCode, id, payload });
       } else {
-        await createClubTask({ token, tenantCode, payload });
+        result = await createClubTask({ token, tenantCode, payload });
       }
+      if (result?.data?.id) await uploadTaskFiles(result.data.id);
       toast(isEdit ? "任务已更新" : "任务已创建", "success");
       setTimeout(() => navigate("/admin/club-tasks"), 800);
     } catch (e) {
@@ -162,6 +179,14 @@ function ClubTaskFormPage() {
               已选 {selectedAssigneeIds.length} 人
             </p>
           )}
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label>附件</label>
+          <input type="file" multiple
+            onChange={(e) => setTaskFiles([...e.target.files])}
+            style={{ width: "100%", padding: "6px 8px", fontSize: 12 }} />
+          {taskFiles.length > 0 && <span style={{ fontSize: 11, color: "#0D9488" }}>已选 {taskFiles.length} 个文件</span>}
         </div>
 
         <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
