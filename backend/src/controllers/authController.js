@@ -263,11 +263,24 @@ const DEFAULT_TENANT_NAME = process.env.DEFAULT_TENANT_NAME || "默认租户";
 const DEFAULT_TENANT_CODE = process.env.DEFAULT_TENANT_CODE || "default";
 
 async function ensureDefaultAdmin() {
+  // 1. 确保默认租户存在（无论 admin 是否存在）
+  const [tenant] = await Tenant.findOrCreate({
+    where: { code: DEFAULT_TENANT_CODE },
+    defaults: { name: DEFAULT_TENANT_NAME, code: DEFAULT_TENANT_CODE, status: "active" },
+  });
+
+  // 2. 确保默认管理员存在
   const existing = await User.findOne({ where: { email: DEFAULT_ADMIN_EMAIL } });
   if (existing) {
+    // 即使 admin 已存在，也要保证它有租户成员关系
+    await TenantMembership.findOrCreate({
+      where: { tenant_id: tenant.id, user_id: existing.id },
+      defaults: { role: "tenant_admin" },
+    });
     return;
   }
 
+  // 3. 新管理员 — 事务创建
   const transaction = await sequelize.transaction();
   try {
     const password_hash = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, SALT_ROUNDS);
@@ -280,17 +293,11 @@ async function ensureDefaultAdmin() {
       force_password_reset: true,
     }, { transaction });
 
-    const [tenant] = await Tenant.findOrCreate({
-      where: { code: DEFAULT_TENANT_CODE },
-      defaults: { name: DEFAULT_TENANT_NAME, code: DEFAULT_TENANT_CODE, status: "active" },
-      transaction,
-    });
-
-    await TenantMembership.findOrCreate({
-      where: { tenant_id: tenant.id, user_id: user.id },
-      defaults: { role: "tenant_admin" },
-      transaction,
-    });
+    await TenantMembership.create({
+      tenant_id: tenant.id,
+      user_id: user.id,
+      role: "tenant_admin",
+    }, { transaction });
 
     await transaction.commit();
   } catch (error) {
