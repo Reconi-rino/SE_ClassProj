@@ -23,7 +23,7 @@ function FinancialFormPage() {
     setSubmitting(true); setError("");
     try {
       await createFinancialRecord({ token, tenantCode: getTenantCode(), payload: { ...form, club_id: Number(form.club_id), amount: Number(form.amount) } });
-      navigate("/finance");
+      navigate("/admin/finance");
     } catch (er) {
       setError(getUserFacingError(er, "新增财务流水失败"));
     } finally { setSubmitting(false); }

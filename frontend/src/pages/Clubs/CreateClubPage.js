@@ -23,7 +23,7 @@ function CreateClubPage() {
     setSubmitting(true); setError("");
     try {
       const result = await createClub({ token, tenantCode: getTenantCode(), payload: form });
-      navigate(`/clubs/${result?.data?.id || ""}`);
+      navigate(`/admin/clubs/${result?.data?.id || ""}`);
     } catch (er) {
       setError(getUserFacingError(er, "创建社团失败，请检查输入后重试。"));
     } finally {

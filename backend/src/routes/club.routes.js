@@ -64,6 +64,13 @@ router.patch(
 
 router.delete("/:id", [clubIdParamValidator], authorize("delete", "club"), clubController.deleteClub);
 
+router.post(
+  "/:id/cover-image",
+  clubIdParamValidator,
+  authorize("update", "club"),
+  clubController.uploadCoverImage
+);
+
 router.get(
   "/:id/members",
   [clubIdParamValidator],

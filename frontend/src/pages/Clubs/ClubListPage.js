@@ -37,7 +37,7 @@ function ClubListPage() {
           <h2>社团列表</h2>
           <p className="page-header-sub">管理当前租户下的所有社团</p>
         </div>
-        <Link to="/clubs/new" className="btn">
+        <Link to="/admin/clubs/new" className="btn">
           <IconPlus size={16} />
           创建社团
         </Link>
@@ -89,8 +89,8 @@ function ClubListPage() {
                   </td>
                   <td>
                     <div className="actions-row">
-                      <Link to={`/clubs/${club.id}`} className="btn btn-sm">详情</Link>
-                      <Link to={`/clubs/${club.id}/members`} className="btn btn-sm btn-outline">成员</Link>
+                      <Link to={`/admin/clubs/${club.id}`} className="btn btn-sm">详情</Link>
+                      <Link to={`/admin/clubs/${club.id}/members`} className="btn btn-sm btn-outline">成员</Link>
                     </div>
                   </td>
                 </tr>

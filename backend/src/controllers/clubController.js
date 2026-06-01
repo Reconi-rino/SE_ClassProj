@@ -1,5 +1,6 @@
 const clubService = require("../services/club.service");
 const { handleServiceError, handleRequestValidation } = require("../utils/errorResponse");
+const { uploadAvatar, handleMulterError } = require("../utils/upload");
 
 async function listClubs(req, res, next) {
   if (!handleRequestValidation(req, res)) {
@@ -220,12 +221,31 @@ async function removeClubMember(req, res, next) {
   }
 }
 
+function uploadCoverImage(req, res) {
+  uploadAvatar(req, res, async (err) => {
+    if (err) return handleMulterError(err, req, res, () => {});
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "请选择要上传的图片" });
+    }
+    try {
+      const coverUrl = `/uploads/avatars/${req.file.filename}`;
+      const club = await clubService.updateClub({
+        tenantId: req.tenant.id, clubId: req.params.id, payload: { cover_image_url: coverUrl },
+      });
+      return res.status(200).json({ success: true, data: { cover_image_url: coverUrl, club } });
+    } catch (error) {
+      return handleServiceError(error, res, () => {});
+    }
+  });
+}
+
 module.exports = {
   listClubs,
   getClub,
   createClub,
   updateClub,
   deleteClub,
+  uploadCoverImage,
   listClubMembers,
   joinClub,
   leaveClub,

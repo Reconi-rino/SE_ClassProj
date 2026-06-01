@@ -23,7 +23,7 @@ function ActivityFormPage() {
     setSubmitting(true); setError("");
     try {
       const result = await createActivity({ token, tenantCode: getTenantCode(), payload: { ...form, club_id: Number(form.club_id) } });
-      navigate(`/activities/${result?.data?.id || ""}`);
+      navigate(`/admin/activities/${result?.data?.id || ""}`);
     } catch (er) {
       setError(getUserFacingError(er, "创建活动失败，请检查输入后重试。"));
     } finally { setSubmitting(false); }

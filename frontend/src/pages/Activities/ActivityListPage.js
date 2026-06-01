@@ -35,7 +35,7 @@ function ActivityListPage() {
           <h2>活动列表</h2>
           <p className="page-header-sub">浏览与管理所有活动</p>
         </div>
-        <Link to="/activities/new" className="btn"><IconSparkle size={16} /> 创建活动</Link>
+        <Link to="/admin/activities/new" className="btn"><IconSparkle size={16} /> 创建活动</Link>
       </div>
 
       <div className="filter-toolbar">

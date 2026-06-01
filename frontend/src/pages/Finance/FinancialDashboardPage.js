@@ -55,8 +55,8 @@ function FinancialDashboardPage() {
           <p className="page-header-sub">收支总览与月度统计</p>
         </div>
         <div className="actions-row">
-          <Link to="/finance/new" className="btn btn-sm"><IconPlus size={14} /> 新增流水</Link>
-          <Link to="/finance/public" className="btn btn-sm btn-outline"><IconEye size={14} /> 公开页</Link>
+          <Link to="/admin/finance/new" className="btn btn-sm"><IconPlus size={14} /> 新增流水</Link>
+          <Link to="/admin/finance/public" className="btn btn-sm btn-outline"><IconEye size={14} /> 公开页</Link>
         </div>
       </div>
 
