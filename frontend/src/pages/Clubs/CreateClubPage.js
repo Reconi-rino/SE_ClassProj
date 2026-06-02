@@ -10,6 +10,7 @@ function CreateClubPage() {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", description: "", status: "active" });
+  const [coverFile, setCoverFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,11 +19,23 @@ function CreateClubPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const uploadCover = async (clubId) => {
+    if (!coverFile) return;
+    const fd = new FormData();
+    fd.append("file", coverFile);
+    await fetch(`/api/clubs/${clubId}/cover-image`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "x-tenant-code": getTenantCode() },
+      body: fd,
+    }).catch(() => {});
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true); setError("");
     try {
       const result = await createClub({ token, tenantCode: getTenantCode(), payload: form });
+      if (result?.data?.id) await uploadCover(result.data.id);
       navigate(`/admin/clubs/${result?.data?.id || ""}`);
     } catch (er) {
       setError(getUserFacingError(er, "创建社团失败，请检查输入后重试。"));
@@ -35,7 +48,7 @@ function CreateClubPage() {
     <div className="container">
       <div className="page-header">
         <h2>创建社团</h2>
-        <Link to="/clubs" className="btn btn-sm btn-outline">返回列表</Link>
+        <Link to="/admin/clubs" className="btn btn-sm btn-outline">返回列表</Link>
       </div>
 
       <div className="card" style={{ maxWidth: 640 }}>
@@ -48,6 +61,13 @@ function CreateClubPage() {
           <div className="form-group">
             <label htmlFor="description">简介</label>
             <textarea id="description" name="description" value={form.description} onChange={handleChange} rows="4" placeholder="描述社团的宗旨与活动方向（选填）" />
+          </div>
+          <div className="form-group">
+            <label>社团头图</label>
+            <input type="file" accept="image/*"
+              onChange={(e) => setCoverFile(e.target.files[0])}
+              style={{ padding: "6px 8px", fontSize: 13 }} />
+            {coverFile && <span style={{ fontSize: 11, color: "#0D9488" }}>已选择: {coverFile.name}</span>}
           </div>
           <div className="form-group">
             <label htmlFor="status">状态</label>

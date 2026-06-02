@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "../../contexts/ToastContext";
 import { getTenantCode, setTenantCode } from "../../services/tenantStore";
 import {
   IconHome, IconBuilding, IconCalendar, IconCheckCircle, IconDollar, IconSparkle,
@@ -75,7 +76,8 @@ const roleLabels = {
 };
 
 function AppLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
+  const { toast } = useToast();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("ccms_theme") || "light");
@@ -99,6 +101,26 @@ function AppLayout() {
   const initials = user?.username ? user.username.slice(0, 2).toUpperCase() : "?";
   const roleLabel = roleLabels[user?.role] || user?.role || "";
   const isDark = theme === "dark";
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/auth/avatar", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (res.ok) {
+        toast("头像已更新", "success");
+        window.location.reload();
+      } else {
+        toast("上传失败", "error");
+      }
+    } catch { toast("上传失败", "error"); }
+  };
 
   return (
     <div className="app-shell">
@@ -133,7 +155,14 @@ function AppLayout() {
 
         <div className="sidebar-footer">
           <div className="sidebar-footer-user">
-            <div className="sidebar-avatar">{initials}</div>
+            <label style={{ cursor: "pointer", position: "relative" }} title="点击更换头像">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--gray-200)" }} />
+              ) : (
+                <div className="sidebar-avatar">{initials}</div>
+              )}
+              <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: "none" }} />
+            </label>
             <div className="sidebar-user-info">
               <div className="sidebar-user-name">{user?.username}</div>
               <div className="sidebar-user-role">{roleLabel}</div>
