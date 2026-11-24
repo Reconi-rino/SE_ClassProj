@@ -1,6 +1,5 @@
 const { TenantMembership, ClubMember } = require("../models");
 const { resolvePolicyResource, resolveScopedClubForResource } = require("./resource.resolver");
-const { parsePositiveInt } = require("../utils/common");
 
 const ROLE_ALIASES = {
   student: "member",
@@ -51,6 +50,11 @@ const POLICY = {
     },
   },
   club_member: {
+    add: {
+      allowTenantRoles: ["tenant_admin"],
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+      allowClubRoles: ["founder", "admin"],
+    },
     read: {
       allowTenantRoles: ["tenant_admin", "member"],
       allowGlobalRoles: ["system_admin", "platform_admin", "club_admin"],
@@ -75,6 +79,16 @@ const POLICY = {
       allowClubRoles: ["founder", "admin"],
     },
   },
+  reimbursement: {
+    access: {
+      allowTenantRoles: ["tenant_admin", "member"],
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+    },
+    review: {
+      allowTenantRoles: ["tenant_admin"],
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+    },
+  },
   financial_record: {
     read: {
       allowTenantRoles: ["member", "tenant_admin"],
@@ -96,7 +110,18 @@ const POLICY = {
       allowClubRoles: ["founder", "admin"],
     },
   },
+  activity_registration: {
+    self: {
+      allowTenantRoles: ["tenant_admin", "member"],
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+    },
+  },
   activity: {
+    read_registrations: {
+      allowTenantRoles: ["tenant_admin"],
+      allowGlobalRoles: ["system_admin", "platform_admin"],
+      allowClubRoles: ["founder", "admin"],
+    },
     read: {
       allowTenantRoles: ["tenant_admin", "member"],
       allowGlobalRoles: ["system_admin", "platform_admin"],
@@ -124,11 +149,11 @@ const POLICY = {
   },
   approval: {
     read_pending: {
-      allowTenantRoles: ["tenant_admin", "member"],
+      allowTenantRoles: ["tenant_admin"],
       allowGlobalRoles: ["system_admin", "platform_admin"],
     },
     decide: {
-      allowTenantRoles: ["tenant_admin", "member"],
+      allowTenantRoles: ["tenant_admin"],
       allowGlobalRoles: ["system_admin", "platform_admin"],
     },
   },
@@ -143,7 +168,7 @@ const POLICY = {
       allowClubRoles: ["founder", "admin"],
     },
     update: {
-      allowTenantRoles: ["tenant_admin"],
+      allowTenantRoles: ["tenant_admin", "member"],
       allowGlobalRoles: ["system_admin", "platform_admin", "club_admin"],
       allowClubRoles: ["founder", "admin"],
     },

@@ -18,7 +18,7 @@ describe("activity.service", () => {
     nonMember = nm.user;
     const a = await createUser({ username: "approver", email: "approver@test.local", role: "student" });
     approver = a.user;
-    await addTenantMembership(tenant, approver, "member");
+    await addTenantMembership(tenant, approver, "tenant_admin");
   });
 
   async function createActivityForTest(club, overrides = {}) {

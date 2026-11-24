@@ -6,8 +6,10 @@ const TenantMembership = require("./TenantMembership");
 const Club = require("./Club");
 const ClubMember = require("./ClubMember");
 const Activity = require("./Activity");
+const ActivityRegistration = require("./ActivityRegistration");
 const Approval = require("./Approval");
 const FinancialRecord = require("./FinancialRecord");
+const Reimbursement = require("./Reimbursement");
 const PersonalTask = require("./PersonalTask");
 const ClubTask = require("./ClubTask");
 const TaskAttachment = require("./TaskAttachment");
@@ -112,6 +114,22 @@ Activity.belongsTo(User, {
   as: "creator",
 });
 
+ActivityRegistration.belongsTo(Activity, {
+  foreignKey: "activity_id",
+  as: "activity",
+  onDelete: "CASCADE",
+});
+ActivityRegistration.belongsTo(User, {
+  foreignKey: "user_id",
+  as: "user",
+  onDelete: "CASCADE",
+});
+ActivityRegistration.belongsTo(Tenant, {
+  foreignKey: "tenant_id",
+  as: "tenant",
+  onDelete: "RESTRICT",
+});
+
 Tenant.hasMany(Approval, {
   foreignKey: "tenant_id",
   as: "approvals",
@@ -141,6 +159,8 @@ Approval.belongsTo(User, {
   foreignKey: "approver_id",
   as: "approver",
 });
+
+Approval.belongsTo(User, { foreignKey: "decided_by", as: "reviewer", onDelete: "SET NULL" });
 
 Tenant.hasMany(FinancialRecord, {
   foreignKey: "tenant_id",
@@ -172,6 +192,15 @@ FinancialRecord.belongsTo(User, {
   as: "creator",
 });
 
+Reimbursement.belongsTo(Tenant, { foreignKey: "tenant_id", as: "tenant", onDelete: "RESTRICT" });
+Reimbursement.belongsTo(Club, { foreignKey: "club_id", as: "club", onDelete: "RESTRICT" });
+Reimbursement.belongsTo(User, { foreignKey: "applicant_id", as: "applicant", onDelete: "RESTRICT" });
+Reimbursement.belongsTo(User, { foreignKey: "reviewer_id", as: "reviewer", onDelete: "RESTRICT" });
+Reimbursement.belongsTo(User, { foreignKey: "booked_by", as: "bookkeeper", onDelete: "RESTRICT" });
+Reimbursement.hasOne(FinancialRecord, {
+  foreignKey: "reimbursement_id", as: "financial_record", onDelete: "RESTRICT",
+});
+
 Tenant.hasMany(PersonalTask, { foreignKey: "tenant_id", as: "personalTasks" });
 PersonalTask.belongsTo(Tenant, { foreignKey: "tenant_id", as: "tenant" });
 User.hasMany(PersonalTask, { foreignKey: "user_id", as: "personalTasks" });
@@ -197,8 +226,10 @@ const db = {
   Club,
   ClubMember,
   Activity,
+  ActivityRegistration,
   Approval,
   FinancialRecord,
+  Reimbursement,
   PersonalTask,
   ClubTask,
   TaskAttachment,

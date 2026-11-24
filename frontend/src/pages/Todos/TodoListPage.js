@@ -72,7 +72,7 @@ function TodoListPage() {
     e.preventDefault();
     setError("");
     try {
-      const result = await createPersonalTask({ token, tenantCode, payload: form });
+      const result = await createPersonalTask({ token, tenantCode, payload: { ...form, due_date: form.due_date || null } });
       if (result?.data?.id) await uploadTaskFiles(result.data.id);
       toast("任务已创建", "success");
       setTaskFiles([]);
@@ -87,7 +87,8 @@ function TodoListPage() {
     e.preventDefault();
     setError("");
     try {
-      await updatePersonalTask({ token, tenantCode, id: editTask.id, payload: form });
+      await updatePersonalTask({ token, tenantCode, id: editTask.id, payload: { ...form, due_date: form.due_date || null } });
+      await uploadTaskFiles(editTask.id);
       toast("任务已更新", "success");
       resetForm();
       await load();

@@ -33,7 +33,7 @@ function FinancialFormPage() {
     <div className="container">
       <div className="page-header">
         <h2>新增财务流水</h2>
-        <Link to="/finance" className="btn btn-sm btn-outline">返回仪表盘</Link>
+        <Link to="/admin/finance" className="btn btn-sm btn-outline">返回仪表盘</Link>
       </div>
 
       <div className="card" style={{ maxWidth: 640 }}>
@@ -56,7 +56,7 @@ function FinancialFormPage() {
           </div>
           <div className="form-group">
             <label htmlFor="amount" className="form-label-required">金额</label>
-            <input id="amount" name="amount" type="number" step="0.01" min="0" value={form.amount} onChange={handleChange} placeholder="0.00" required />
+            <input id="amount" name="amount" type="number" step="0.01" min="0.01" value={form.amount} onChange={handleChange} placeholder="0.00" required />
           </div>
           <div className="form-group">
             <label htmlFor="description">说明</label>

@@ -13,6 +13,8 @@ const navSections = [
     label: "概览",
     items: [
       { to: "/admin", label: "控制台", icon: IconHome, end: true },
+      { to: "/activities", label: "社区广场", icon: IconCalendar },
+      { to: "/my-registrations", label: "我的报名", icon: IconCheckCircle },
     ],
   },
   {
@@ -47,6 +49,7 @@ const navSections = [
     label: "财务管理",
     items: [
       { to: "/admin/finance", label: "财务仪表盘", icon: IconDollar },
+      { to: "/admin/finance/reimbursements", label: "经费报销", icon: IconFile },
       { to: "/admin/finance/new", label: "新增流水", icon: IconPlus },
       { to: "/admin/finance/public", label: "财务公开", icon: IconEye },
     ],
@@ -62,6 +65,7 @@ const breadcrumbMap = {
   "/admin/approvals": "审批中心",
   "/admin/finance": "财务仪表盘",
   "/admin/finance/new": "新增流水",
+  "/admin/finance/reimbursements": "经费报销",
   "/admin/finance/public": "财务公开",
   "/admin/todos": "我的待办",
   "/admin/club-tasks": "社团任务",
@@ -228,7 +232,7 @@ function AppLayout() {
         </header>
 
         <div className="content-body">
-          <Outlet />
+          <Outlet context={{ tenantCode }} />
         </div>
       </div>
     </div>

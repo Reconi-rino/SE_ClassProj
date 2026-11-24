@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const {
+  sequelize,
   Activity,
   Approval,
   Club,
@@ -8,7 +9,6 @@ const {
   User,
 } = require("../models");
 const { ApiError, parsePositiveInt } = require("../utils/common");
-const { requireTenant } = require("../utils/tenantGuard");
 const { logAuditEvent } = require("../utils/auditLogger");
 
 const ACTIVITY_STATUS = {
@@ -16,6 +16,7 @@ const ACTIVITY_STATUS = {
   PENDING: "pending_approval",
   APPROVED: "approved",
   REJECTED: "rejected",
+  CANCELLED: "cancelled",
   COMPLETED: "completed",
 };
 
@@ -60,26 +61,13 @@ async function ensureActivity(tenantId, activityId) {
   return activity;
 }
 
-async function ensureApproval(tenantId, approvalId) {
-  const id = parsePositiveInt(approvalId);
-  if (!id) {
-    throw new ApiError(400, "VALIDATION_ERROR", "approval id must be a positive integer.");
-  }
-  const approval = await Approval.findOne({
-    where: { id, tenant_id: tenantId },
-    include: [
-      {
-        model: Activity,
-        as: "activity",
-        include: [{ model: Club, as: "club", attributes: ["id", "tenant_id", "founder_id"] }],
-      },
-      { model: User, as: "approver", attributes: ["id", "username", "email"] },
-    ],
+async function lockActivity(tenantId, activityId, transaction) {
+  const id = parsePositiveInt(activityId);
+  const activity = id && await Activity.findOne({
+    where: { id, tenant_id: tenantId }, transaction, lock: transaction.LOCK.UPDATE,
   });
-  if (!approval) {
-    throw new ApiError(404, "APPROVAL_NOT_FOUND", "Approval request not found.");
-  }
-  return approval;
+  if (!activity) throw new ApiError(404, "ACTIVITY_NOT_FOUND", "活动不存在。");
+  return activity;
 }
 
 async function ensureTenantMembership(tenantId, userId) {
@@ -105,16 +93,16 @@ async function resolveTenantMembershipRole(tenantId, userId) {
   }
 }
 
-async function ensureCanManageClub(tenantId, userId, club) {
+async function canManageClub(tenantId, userId, club) {
   if (isGlobalPrivileged((await User.findByPk(userId))?.role)) {
-    return;
+    return true;
   }
   const tenantRole = await resolveTenantMembershipRole(tenantId, userId);
   if (tenantRole === "tenant_admin") {
-    return;
+    return true;
   }
   if (club.founder_id === userId) {
-    return;
+    return true;
   }
   const clubMembership = await ClubMember.findOne({
     where: {
@@ -124,7 +112,11 @@ async function ensureCanManageClub(tenantId, userId, club) {
       role: { [Op.in]: ["founder", "admin"] },
     },
   });
-  if (!clubMembership) {
+  return Boolean(clubMembership);
+}
+
+async function ensureCanManageClub(tenantId, userId, club) {
+  if (!(await canManageClub(tenantId, userId, club))) {
     throw new ApiError(403, "ACTIVITY_OWNERSHIP_DENIED", "You do not have permission to manage this club's activities.");
   }
 }
@@ -189,6 +181,7 @@ async function createActivity({ tenantId, actorUserId, payload }) {
     start_time: payload.start_time,
     end_time: payload.end_time || null,
     location: payload.location ? payload.location.trim() : null,
+    registration_capacity: payload.registration_capacity ?? null,
     status: ACTIVITY_STATUS.DRAFT,
     created_by: actorUserId,
   });
@@ -196,21 +189,29 @@ async function createActivity({ tenantId, actorUserId, payload }) {
   return activity;
 }
 
-async function listActivities({ tenantId, actorUserId, status, userRole }) {
+async function listActivities({ tenantId, actorUserId, status, userRole, clubId, startDate, endDate }) {
   const where = { tenant_id: tenantId };
   const normalizedStatus = status ? normalizeActivityStatus(status) : null;
   if (normalizedStatus) {
     where.status = normalizedStatus;
+  }
+  if (clubId) where.club_id = clubId;
+  if (startDate || endDate) {
+    where.start_time = {};
+    if (startDate) where.start_time[Op.gte] = new Date(`${startDate}T00:00:00+08:00`);
+    if (endDate) {
+      where.start_time[Op.lt] = new Date(Date.parse(`${endDate}T00:00:00+08:00`) + 86400000);
+    }
   }
 
   if (!isGlobalPrivileged(userRole)) {
     const tenantRole = await resolveTenantMembershipRole(tenantId, actorUserId);
     if (tenantRole !== "tenant_admin") {
       const accessibleClubIds = await listAccessibleClubIds(tenantId, actorUserId);
-      if (!accessibleClubIds.length) {
+      if (!accessibleClubIds.length || (clubId && !accessibleClubIds.includes(clubId))) {
         return [];
       }
-      where.club_id = { [Op.in]: accessibleClubIds };
+      if (!clubId) where.club_id = { [Op.in]: accessibleClubIds };
     }
   }
 
@@ -228,13 +229,26 @@ async function getActivityById({ tenantId, actorUserId, activityId }) {
   const activity = await ensureActivity(tenantId, activityId);
   await ensureCanAccessClub(tenantId, actorUserId, activity.club);
 
-  return Activity.findOne({
+  const details = await Activity.findOne({
     where: { id: activity.id, tenant_id: tenantId },
     include: [
       { model: Club, as: "club", attributes: ["id", "name", "founder_id", "status"] },
       { model: User, as: "creator", attributes: ["id", "username", "email"] },
     ],
   });
+  if (!details) {
+    throw new ApiError(404, "ACTIVITY_NOT_FOUND", "Activity not found.");
+  }
+  const review = details.status === ACTIVITY_STATUS.REJECTED ?
+    await Approval.findOne({
+      where: { tenant_id: tenantId, activity_id: activity.id, status: "rejected" },
+      attributes: ["comments"], order: [["updated_at", "DESC"], ["id", "DESC"]],
+    }) : null;
+  return {
+    ...details.toJSON(), review_comment: review?.comments ?? null,
+    can_manage: await canManageClub(tenantId, actorUserId, activity.club),
+    can_review: await resolveTenantMembershipRole(tenantId, actorUserId) === "tenant_admin",
+  };
 }
 
 async function updateActivity({ tenantId, actorUserId, activityId, payload }) {
@@ -246,6 +260,10 @@ async function updateActivity({ tenantId, actorUserId, activityId, payload }) {
   if (!statusTransition.ok) {
     throw new ApiError(409, "ACTIVITY_STATUS_TRANSITION_INVALID", statusTransition.message);
   }
+  if (nextStatus === ACTIVITY_STATUS.COMPLETED && activity.status !== nextStatus &&
+      (activity.end_time || activity.start_time).getTime() > Date.now()) {
+    throw new ApiError(409, "ACTIVITY_NOT_ENDED", "活动尚未结束，无法结项。");
+  }
 
   const updates = {};
   if (payload.title !== undefined) updates.title = payload.title.trim();
@@ -253,6 +271,7 @@ async function updateActivity({ tenantId, actorUserId, activityId, payload }) {
   if (payload.start_time !== undefined) updates.start_time = payload.start_time;
   if (payload.end_time !== undefined) updates.end_time = payload.end_time || null;
   if (payload.location !== undefined) updates.location = payload.location ? payload.location.trim() : null;
+  if (payload.registration_capacity !== undefined) updates.registration_capacity = payload.registration_capacity;
   if (nextStatus !== null) updates.status = nextStatus;
 
   const editingCoreFields =
@@ -260,7 +279,8 @@ async function updateActivity({ tenantId, actorUserId, activityId, payload }) {
     updates.description !== undefined ||
     updates.start_time !== undefined ||
     updates.end_time !== undefined ||
-    updates.location !== undefined;
+    updates.location !== undefined ||
+    updates.registration_capacity !== undefined;
 
   if (editingCoreFields && !EDITABLE_ACTIVITY_STATUSES.has(activity.status)) {
     throw new ApiError(409, "ACTIVITY_NOT_EDITABLE",
@@ -273,8 +293,12 @@ async function updateActivity({ tenantId, actorUserId, activityId, payload }) {
     throw new ApiError(400, "VALIDATION_ERROR", "end_time must be after start_time.");
   }
 
-  await activity.update(updates);
-  return activity;
+  if (!Object.keys(updates).length) return activity;
+  const [updated] = await Activity.update(updates, {
+    where: { id: activity.id, tenant_id: tenantId, status: activity.status },
+  });
+  if (!updated) throw new ApiError(409, "ACTIVITY_NOT_EDITABLE", "活动状态已变化，请刷新后重试。");
+  return activity.reload();
 }
 
 async function deleteActivity({ tenantId, actorUserId, activityId }) {
@@ -284,134 +308,130 @@ async function deleteActivity({ tenantId, actorUserId, activityId }) {
   if (activity.status === ACTIVITY_STATUS.PENDING) {
     throw new ApiError(409, "ACTIVITY_PENDING_APPROVAL", "Pending approval activity cannot be deleted.");
   }
+  if (!EDITABLE_ACTIVITY_STATUSES.has(activity.status)) {
+    throw new ApiError(409, "ACTIVITY_HISTORY_REQUIRED", "已发布的活动需保留记录。未开始的活动可以取消。");
+  }
 
-  await activity.destroy();
+  const removed = await Activity.destroy({ where: { id: activity.id, tenant_id: tenantId, status: activity.status } });
+  if (!removed) throw new ApiError(409, "ACTIVITY_NOT_EDITABLE", "活动状态已变化，请刷新后重试。");
+}
+
+async function chooseReviewer({ tenantId, approverId, excludedIds, transaction }) {
+  const admins = await TenantMembership.findAll({
+    where: { tenant_id: tenantId, role: "tenant_admin" }, attributes: ["user_id"], transaction,
+  });
+  const reviewer = await User.findOne({
+    where: {
+      id: { [Op.notIn]: excludedIds, ...(approverId != null ? { [Op.eq]: parsePositiveInt(approverId) } : {}) },
+      [Op.or]: [{ id: admins.map(({ user_id }) => user_id) }, { role: ["system_admin", "platform_admin"] }],
+    },
+    attributes: ["id"], order: [["id", "ASC"]], transaction,
+  });
+  if (!reviewer) {
+    if (approverId != null) throw new ApiError(400, "APPROVER_NOT_ELIGIBLE", "请选择非申请人且有审批权限的管理员。");
+    throw new ApiError(409, "NO_ELIGIBLE_APPROVER", "当前没有可审批此活动的其他管理员。");
+  }
+  return reviewer.id;
 }
 
 async function submitForApproval({ tenantId, actorUserId, activityId, approverId, comments }) {
-  const activity = await ensureActivity(tenantId, activityId);
-  await ensureCanManageClub(tenantId, actorUserId, activity.club);
-
-  if (activity.status !== ACTIVITY_STATUS.DRAFT) {
-    throw new ApiError(409, "ACTIVITY_STATUS_TRANSITION_INVALID", "Only draft activities can be submitted for approval.");
-  }
-
-  const approverUserId = parsePositiveInt(approverId);
-  if (!approverUserId) {
-    throw new ApiError(400, "VALIDATION_ERROR", "approver_id must be a positive integer.");
-  }
-
-  const approverUser = await User.findByPk(approverUserId);
-  if (!approverUser) {
-    throw new ApiError(404, "APPROVER_NOT_FOUND", "Approver user not found.");
-  }
-
-  const approverMembership = await TenantMembership.findOne({
-    where: { tenant_id: tenantId, user_id: approverUserId },
-  });
-  if (!approverMembership) {
-    throw new ApiError(400, "APPROVER_TENANT_MISMATCH", "Approver must belong to the current tenant.");
-  }
-
-  const existingApproval = await Approval.findOne({
-    where: { tenant_id: tenantId, activity_id: activityId, approver_id: approverUserId },
-  });
-  if (existingApproval && existingApproval.status === "pending") {
-    throw new ApiError(409, "APPROVAL_ALREADY_PENDING", "An approval request is already pending for this activity.");
-  }
-
-  const approvalPayload = {
-    status: "pending",
-    comments: comments ? comments.trim() : null,
-  };
-
-  let approval = existingApproval;
-  if (approval) {
-    await approval.update(approvalPayload);
-  } else {
-    approval = await Approval.create({
-      tenant_id: tenantId,
-      activity_id: activityId,
-      approver_id: approverUserId,
-      ...approvalPayload,
+  const details = await ensureActivity(tenantId, activityId);
+  await ensureCanManageClub(tenantId, actorUserId, details.club);
+  return sequelize.transaction(async (transaction) => {
+    const activity = await lockActivity(tenantId, details.id, transaction);
+    if (activity.status !== ACTIVITY_STATUS.DRAFT) {
+      throw new ApiError(409, "ACTIVITY_STATUS_TRANSITION_INVALID", "只有草稿可以提交审批。");
+    }
+    const reviewerId = await chooseReviewer({
+      tenantId, approverId, excludedIds: [activity.created_by, actorUserId], transaction,
     });
-  }
-
-  await activity.update({ status: ACTIVITY_STATUS.PENDING });
-
-  return { activity, approval };
+    const where = { tenant_id: tenantId, activity_id: activity.id, approver_id: reviewerId };
+    const approvalPayload = {
+      submitted_by: actorUserId, decided_by: null, status: "pending", comments: comments?.trim() || null,
+    };
+    let approval = await Approval.findOne({ where, transaction });
+    if (approval) await approval.update(approvalPayload, { transaction });
+    else approval = await Approval.create({ ...where, ...approvalPayload }, { transaction });
+    await activity.update({ status: ACTIVITY_STATUS.PENDING }, { transaction });
+    return { activity, approval };
+  });
 }
 
-async function listPendingApprovals({ tenantId, actorUserId, status, userRole }) {
+async function requireReviewer(tenantId, actorUserId) {
+  if (await resolveTenantMembershipRole(tenantId, actorUserId) !== "tenant_admin") {
+    throw new ApiError(403, "APPROVAL_ROLE_REQUIRED", "只有学校管理员可以审批活动。");
+  }
+}
+
+async function listPendingApprovals({ tenantId, actorUserId, status }) {
+  await requireReviewer(tenantId, actorUserId);
   let targetStatus = "pending";
   if (status === "approved") targetStatus = "approved";
   if (status === "rejected") targetStatus = "rejected";
 
-  const where = { tenant_id: tenantId, status: targetStatus };
-
-  if (!isGlobalPrivileged(userRole)) {
-    const tenantRole = await resolveTenantMembershipRole(tenantId, actorUserId);
-    if (tenantRole !== "tenant_admin") {
-      where.approver_id = actorUserId;
-    }
-  }
-
-  return Approval.findAll({
-    where,
+  const approvals = await Approval.findAll({
+    where: { tenant_id: tenantId, status: targetStatus },
     order: [["created_at", "DESC"]],
     include: [
-      { model: Activity, as: "activity", attributes: ["id", "club_id", "title", "status", "start_time", "end_time", "location"] },
-      { model: User, as: "approver", attributes: ["id", "username", "email"] },
+      { model: Activity, as: "activity", attributes: ["id", "created_by", "club_id", "title", "status", "start_time", "end_time", "location"] },
+      { model: User, as: "approver", attributes: ["id", "username"] },
+      { model: User, as: "reviewer", attributes: ["id", "username"] },
     ],
   });
+  return approvals.map((approval) => ({
+    ...approval.toJSON(),
+    can_decide: approval.status === "pending" && approval.activity?.status === ACTIVITY_STATUS.PENDING &&
+      ![approval.submitted_by, approval.activity.created_by].includes(actorUserId),
+  }));
 }
 
-async function decideApproval({ tenantId, actorUserId, approvalId, decision, comments, userRole }) {
-  const approval = await ensureApproval(tenantId, approvalId);
-
-  if (approval.status !== "pending") {
-    throw new ApiError(409, "APPROVAL_ALREADY_DECIDED", "Only pending approvals can be decided.");
-  }
-
-  if (!approval.activity || approval.activity.status !== ACTIVITY_STATUS.PENDING) {
-    throw new ApiError(409, "ACTIVITY_STATUS_TRANSITION_INVALID", "Activity is not in pending approval state.");
-  }
-
+async function decideApproval({ tenantId, actorUserId, approvalId, decision, comments }) {
+  await requireReviewer(tenantId, actorUserId);
   if (!DECISION_VALUES.has(decision)) {
     throw new ApiError(400, "VALIDATION_ERROR", "decision must be approve or reject.");
   }
-
-  const tenantRole = await resolveTenantMembershipRole(tenantId, actorUserId);
-  const canModerate = tenantRole === "tenant_admin" || isGlobalPrivileged(userRole);
-  if (!canModerate && approval.approver_id !== actorUserId) {
-    throw new ApiError(403, "APPROVAL_OWNERSHIP_DENIED", "You can only decide approvals assigned to you.");
+  const note = comments?.trim() || null;
+  if (decision === "reject" && !note) {
+    throw new ApiError(400, "REJECTION_REASON_REQUIRED", "请填写驳回原因。");
   }
-
-  const nextApprovalStatus = decision === "approve" ? "approved" : "rejected";
-  const nextActivityStatus = decision === "approve" ? ACTIVITY_STATUS.APPROVED : ACTIVITY_STATUS.REJECTED;
-
-  await approval.update({
-    status: nextApprovalStatus,
-    comments: comments ? comments.trim() : null,
+  const where = { id: parsePositiveInt(approvalId), tenant_id: tenantId };
+  const candidate = await Approval.findOne({ where, attributes: ["activity_id"] });
+  if (!candidate) throw new ApiError(404, "APPROVAL_NOT_FOUND", "审批记录不存在。");
+  const result = await sequelize.transaction(async (transaction) => {
+    const activity = await lockActivity(tenantId, candidate.activity_id, transaction);
+    const approval = await Approval.findOne({ where, transaction, lock: transaction.LOCK.UPDATE });
+    if (!approval || approval.status !== "pending" || activity.status !== ACTIVITY_STATUS.PENDING) {
+      throw new ApiError(409, "APPROVAL_ALREADY_DECIDED", "审批状态已变化，请刷新。");
+    }
+    if ([approval.submitted_by, activity.created_by].includes(actorUserId)) {
+      throw new ApiError(403, "SELF_APPROVAL_DENIED", "请由其他管理员审核此活动。");
+    }
+    const status = decision === "approve" ? ACTIVITY_STATUS.APPROVED : ACTIVITY_STATUS.REJECTED;
+    await approval.update({ status, comments: note, decided_by: actorUserId }, { transaction });
+    await Approval.update({ status: "cancelled" }, {
+      where: { tenant_id: tenantId, activity_id: activity.id, status: "pending", id: { [Op.ne]: approval.id } },
+      transaction,
+    });
+    await activity.update({ status }, { transaction });
+    return { approval, activity };
   });
-  await approval.activity.update({ status: nextActivityStatus });
 
   logAuditEvent({
     req: null,
     action: "approval.decision",
     outcome: "success",
-    target: { type: "approval", id: approval.id },
+    target: { type: "approval", id: result.approval.id },
     metadata: {
       decision,
-      approval_status: nextApprovalStatus,
-      activity_id: approval.activity_id,
-      activity_status: nextActivityStatus,
+      approval_status: result.approval.status,
+      activity_id: result.activity.id,
+      activity_status: result.activity.status,
       actor_id: actorUserId,
       tenant_id: tenantId,
     },
   });
 
-  return { approval, activity: approval.activity };
+  return result;
 }
 
 module.exports = {
@@ -423,4 +443,7 @@ module.exports = {
   submitForApproval,
   listPendingApprovals,
   decideApproval,
+  ensureActivity,
+  lockActivity,
+  ensureCanManageClub,
 };

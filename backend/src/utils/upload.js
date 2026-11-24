@@ -3,7 +3,8 @@ const { v4: uuidv4 } = require("uuid");
 const path = require("path");
 const fs = require("fs");
 
-const UPLOAD_DIR = path.resolve(__dirname, "..", "..", "uploads");
+const UPLOAD_DIR = process.env.CCMS_UPLOAD_DIR ? path.resolve(process.env.CCMS_UPLOAD_DIR) :
+  path.resolve(__dirname, "..", "..", "uploads");
 const ALLOWED_MIMES = [
   "image/png", "image/jpeg", "image/webp", "image/gif",
   "application/pdf",
@@ -31,7 +32,7 @@ const avatarStorage = multer.diskStorage({
 const attachmentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const taskType = req.params.taskType || "personal";
-    const taskId = req.params.id;
+    const taskId = Number(req.params.id);
     const dir = path.join(UPLOAD_DIR, taskType, String(taskId));
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);

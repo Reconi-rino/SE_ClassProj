@@ -6,73 +6,64 @@ import FeedbackMessage from "../../components/Common/FeedbackMessage";
 import LoadingState from "../../components/Common/LoadingState";
 import { getUserFacingError } from "../../utils/errorMessage";
 import { IconEye } from "../../components/Common/Icons";
+import { useAuth } from "../../contexts/AuthContext";
 
-function FinancialPublicPage() {
+export default function FinancialPublicPage() {
+  const { token } = useAuth();
   const [month, setMonth] = useState("");
-  const [records, setRecords] = useState([]);
+  const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const load = async () => {
-    setLoading(true); setError("");
+  async function load(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
     try {
-      const result = await getFinancialPublicRecords({ tenantCode: getTenantCode(), month });
-      setRecords(Array.isArray(result?.data) ? result.data : []);
-    } catch (e) {
-      setError(getUserFacingError(e, "加载财务公开数据失败"));
-      setRecords([]);
-    } finally { setLoading(false); }
-  };
+      const [year, monthNumber] = month.split("-");
+      const result = await getFinancialPublicRecords({
+        token, tenantCode: getTenantCode(), year, month: Number(monthNumber),
+      });
+      setReport(result.data);
+    } catch (failure) {
+      setError(getUserFacingError(failure, "加载财务公开数据失败"));
+      setReport(null);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="container">
       <div className="page-header">
         <div>
           <h2>财务公开</h2>
-          <p className="page-header-sub">面向全体的公开财务数据查询</p>
+          <p className="page-header-sub">查询校内月度收支和结余</p>
         </div>
-        <Link to="/finance" className="btn btn-sm btn-outline"><IconEye size={14} /> 返回仪表盘</Link>
+        <Link to="/admin/finance" className="btn btn-sm btn-outline"><IconEye size={14} /> 返回仪表盘</Link>
       </div>
 
-      <div className="filter-toolbar">
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} style={{ maxWidth: 200 }} />
-        <button type="button" onClick={load}>查询</button>
-      </div>
+      <form className="filter-toolbar" onSubmit={load}>
+        <label htmlFor="public-finance-month">查询月份</label>
+        <input id="public-finance-month" type="month" value={month} onChange={(e) => setMonth(e.target.value)}
+          style={{ maxWidth: 200 }} required disabled={loading} />
+        <button type="submit" disabled={!month || loading}>查询</button>
+      </form>
 
       <FeedbackMessage message={error} />
-
-      {loading ? (
-        <LoadingState message="正在加载财务公开数据..." />
-      ) : records.length === 0 ? (
-        <div className="card"><div className="empty-state"><h3>暂无公开记录</h3><p>选择月份后点击「查询」，即可查看该月的公开财务记录。</p></div></div>
-      ) : (
+      {loading ? <LoadingState message="正在加载财务公开数据..." /> : report ? (
         <div className="table-wrap">
           <table className="table">
-            <thead>
-              <tr><th>社团</th><th>类型</th><th>分类</th><th>金额</th><th>日期</th><th>说明</th></tr>
-            </thead>
+            <caption>{report.year} 年 {report.month} 月收支汇总</caption>
+            <thead><tr><th>项目</th><th>金额（元）</th><th>流水笔数</th></tr></thead>
             <tbody>
-              {records.map((item, idx) => (
-                <tr key={`${item.id}-${idx}`}>
-                  <td className="cell-strong">{item.club_name || item.club_id || "-"}</td>
-                  <td>
-                    <span className={`badge ${item.type === "income" ? "badge-green" : "badge-red"}`}>
-                      <span className="badge-dot" />
-                      {item.type === "income" ? "收入" : "支出"}
-                    </span>
-                  </td>
-                  <td>{item.category || "-"}</td>
-                  <td className="cell-mono cell-strong" style={{ color: item.type === "income" ? "var(--green-600)" : "var(--red-600)" }}>{Number(item.amount).toLocaleString()}</td>
-                  <td style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>{item.transaction_date || "-"}</td>
-                  <td style={{ color: "var(--color-text-secondary)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.description || "-"}</td>
-                </tr>
-              ))}
+              <tr><th scope="row">收入</th><td>{report.summary.income.toFixed(2)}</td><td>{report.summary.income_count}</td></tr>
+              <tr><th scope="row">支出</th><td>{report.summary.expense.toFixed(2)}</td><td>{report.summary.expense_count}</td></tr>
+              <tr><th scope="row">结余</th><td>{report.summary.net.toFixed(2)}</td><td>—</td></tr>
             </tbody>
           </table>
         </div>
-      )}
+      ) : !error && <p className="card">选择月份后查询收支汇总。</p>}
     </div>
   );
 }
-
-export default FinancialPublicPage;

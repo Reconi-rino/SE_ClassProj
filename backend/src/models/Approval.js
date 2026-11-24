@@ -21,6 +21,8 @@ const Approval = sequelize.define(
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
     },
+    submitted_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    decided_by: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     status: {
       type: DataTypes.ENUM("pending", "approved", "rejected", "changes_requested", "cancelled"),
       allowNull: false,

@@ -80,8 +80,19 @@ router.get(
 
 router.post(
   "/:id/members/join",
-  [clubIdParamValidator],
+  [
+    clubIdParamValidator,
+    body("user_id").optional().isInt({ min: 1 }).toInt(),
+    body("role").optional().isIn(["member", "admin"]),
+  ],
   authorize("join", "club_member"),
+  (req, res, next) => {
+    const targetId = req.body.user_id;
+    if ((targetId !== undefined && targetId !== req.user.id) || req.body.role === "admin") {
+      return authorize("add", "club_member")(req, res, next);
+    }
+    return next();
+  },
   clubController.joinClub
 );
 

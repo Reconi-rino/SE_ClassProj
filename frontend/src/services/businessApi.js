@@ -24,6 +24,10 @@ export function addClubMember({ token, tenantCode, clubId, payload }) {
   return apiRequest(`/clubs/${clubId}/members/join`, { token, tenantCode, method: "POST", body: payload });
 }
 
+export function leaveClub({ token, tenantCode, clubId }) {
+  return apiRequest(`/clubs/${clubId}/members/leave`, { token, tenantCode, method: "POST" });
+}
+
 export function updateClubMemberRole({ token, tenantCode, clubId, memberId, payload }) {
   return apiRequest(`/clubs/${clubId}/members/${memberId}/role`, { token, tenantCode, method: "PATCH", body: payload });
 }
@@ -64,11 +68,11 @@ export function decideApproval({ token, tenantCode, id, payload }) {
   return apiRequest(`/business/approvals/${id}/decision`, { token, tenantCode, method: "POST", body: payload });
 }
 
-export function listFinancialRecords({ token, tenantCode, clubId, type, month }) {
+export function listFinancialRecords({ token, tenantCode, clubId, type, month, year }) {
   return apiRequest("/financial-records", {
     token,
     tenantCode,
-    query: { clubId, type, month },
+    query: { club_id: clubId, type, month, year },
   });
 }
 
@@ -80,8 +84,8 @@ export function getFinancialReports({ token, tenantCode, year }) {
   return apiRequest("/financial-records/reports/yearly", { token, tenantCode, query: { year } });
 }
 
-export function getFinancialPublicRecords({ tenantCode, month }) {
-  return apiRequest("/financial-records/reports/monthly", { tenantCode, query: { month } });
+export function getFinancialPublicRecords({ token, tenantCode, year, month }) {
+  return apiRequest("/financial-records/reports/monthly", { token, tenantCode, query: { year, month } });
 }
 
 export function listPersonalTasks({ token, tenantCode, status, priority }) {

@@ -115,10 +115,14 @@ async function listClubMembers(req, res, next) {
       tenantId: req.tenant.id,
       clubId: req.params.id,
     });
+    const { actorTenantRole, actorGlobalRole } = req.authorization.context;
+    const myRole = result.members.find(({ user_id }) => user_id === req.user.id)?.role;
+    const canManage = actorTenantRole === "tenant_admin" ||
+      ["system_admin", "platform_admin"].includes(actorGlobalRole) || ["founder", "admin"].includes(myRole);
 
     return res.status(200).json({
       success: true,
-      data: result,
+      data: { ...result, can_manage: canManage },
     });
   } catch (error) {
     return handleServiceError(error, res, next);
@@ -136,17 +140,8 @@ async function joinClub(req, res, next) {
       tenantId: req.tenant.id,
       clubId: req.params.id,
       userId: targetUserId,
+      role: req.body.role,
     });
-
-    if (req.body.role && req.body.role !== "member") {
-      await clubService.updateClubMemberRole({
-        tenantId: req.tenant.id,
-        clubId: req.params.id,
-        memberId: membership.id,
-        role: req.body.role,
-      });
-      membership.role = req.body.role;
-    }
 
     return res.status(201).json({
       success: true,

@@ -13,18 +13,19 @@ function ActivityListPage() {
   const { token } = useAuth();
   const [activities, setActivities] = useState([]);
   const [filters, setFilters] = useState({ status: "", clubId: "", startDate: "", endDate: "" });
+  const [appliedFilters, setAppliedFilters] = useState(filters);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const result = await listActivities({ token, tenantCode: getTenantCode(), ...filters });
+      const result = await listActivities({ token, tenantCode: getTenantCode(), ...appliedFilters });
       setActivities(Array.isArray(result?.data) ? result.data : []);
     } catch (e) {
       setError(getUserFacingError(e, "加载活动列表失败"));
     } finally { setLoading(false); }
-  }, [token, filters]);
+  }, [token, appliedFilters]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -45,14 +46,13 @@ function ActivityListPage() {
           <option value="pending_approval">待审批</option>
           <option value="approved">已批准</option>
           <option value="rejected">已驳回</option>
-          <option value="published">已发布</option>
           <option value="cancelled">已取消</option>
           <option value="completed">已完成</option>
         </select>
-        <input placeholder="社团 ID" value={filters.clubId} onChange={(e) => setFilters((p) => ({ ...p, clubId: e.target.value }))} style={{ maxWidth: 110 }} />
+        <input placeholder="社团ID" value={filters.clubId} onChange={(e) => setFilters((p) => ({ ...p, clubId: e.target.value }))} style={{ maxWidth: 110 }} />
         <input type="date" value={filters.startDate} onChange={(e) => setFilters((p) => ({ ...p, startDate: e.target.value }))} />
         <input type="date" value={filters.endDate} onChange={(e) => setFilters((p) => ({ ...p, endDate: e.target.value }))} />
-        <button type="button" onClick={load}>筛选</button>
+        <button type="button" onClick={() => setAppliedFilters({ ...filters })}>筛选</button>
       </div>
 
       <FeedbackMessage message={error} />
@@ -77,7 +77,7 @@ function ActivityListPage() {
                   <td><StatusBadge status={a.status} /></td>
                   <td className="cell-mono">{a.club_id || "-"}</td>
                   <td style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>{a.start_time || "-"}</td>
-                  <td><Link to={`/activities/${a.id}`} className="btn btn-sm">详情</Link></td>
+                  <td><Link to={`/admin/activities/${a.id}`} className="btn btn-sm">详情</Link></td>
                 </tr>
               ))}
             </tbody>

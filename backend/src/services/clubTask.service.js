@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { ClubTask, Club, ClubMember, User, Activity } = require("../models");
+const { ClubTask, Club, ClubMember, TenantMembership, User, Activity } = require("../models");
 const { ApiError, parsePositiveInt } = require("../utils/common");
 
 async function ensureClubInTenant(tenantId, clubId) {
@@ -25,25 +25,32 @@ async function ensureClubTask(tenantId, taskId) {
   return task;
 }
 
-async function ensureClubAdminOrFounder(tenantId, userId, clubId) {
+async function canManageCampus(tenantId, userId) {
   const user = await User.findByPk(userId);
-  if (user && (user.role === "system_admin" || user.role === "platform_admin")) return;
-  const membership = await ClubMember.findOne({
-    where: { tenant_id: tenantId, club_id: clubId, user_id: userId, role: { [Op.in]: ["founder", "admin"] } },
-  });
-  if (!membership) {
+  if (["system_admin", "platform_admin"].includes(user?.role)) return true;
+  const tenantMember = await TenantMembership.findOne({ where: { tenant_id: tenantId, user_id: userId } });
+  return tenantMember?.role === "tenant_admin";
+}
+
+async function clubAccess(tenantId, userId, clubId) {
+  if (await canManageCampus(tenantId, userId)) return { canManage: true, canRead: true };
+  const member = await ClubMember.findOne({ where: { tenant_id: tenantId, club_id: clubId, user_id: userId } });
+  const canManage = ["founder", "admin"].includes(member?.role);
+  return { canManage, canRead: canManage || Boolean(member) };
+}
+
+async function ensureClubAdminOrFounder(tenantId, userId, clubId) {
+  if (!(await clubAccess(tenantId, userId, clubId)).canManage) {
     throw new ApiError(403, "CLUB_TASK_PERMISSION_DENIED", "Only club founder or admin can manage tasks.");
   }
 }
 
-async function ensureClubMember(tenantId, userId) {
-  const user = await User.findByPk(userId);
-  if (user && (user.role === "system_admin" || user.role === "platform_admin")) return;
+async function ensureClubMember(tenantId, clubId, userId) {
   const isMember = await ClubMember.findOne({
-    where: { tenant_id: tenantId, user_id: userId },
+    where: { tenant_id: tenantId, club_id: clubId, user_id: userId },
   });
   if (!isMember) {
-    throw new ApiError(400, "ASSIGNEE_NOT_IN_CLUB", "Assignee is not a member of this tenant.");
+    throw new ApiError(400, "ASSIGNEE_NOT_IN_CLUB", "只能将任务分配给本社团成员。");
   }
 }
 
@@ -53,6 +60,10 @@ function parseAssigneeIds(value) {
     return value.split(",").map((s) => parsePositiveInt(s.trim())).filter(Boolean);
   }
   return [];
+}
+
+function assignedTo(task, userId) {
+  return task.assignee_id === userId || parseAssigneeIds(task.assignee_ids).includes(userId);
 }
 
 async function validateActivityIfProvided(tenantId, clubId, activityId) {
@@ -67,9 +78,11 @@ async function validateActivityIfProvided(tenantId, clubId, activityId) {
 }
 
 async function listClubTasks({ tenantId, clubId, actorUserId, assigneeId, status }) {
-  await ensureClubInTenant(tenantId, clubId);
-  const where = { tenant_id: tenantId, club_id: clubId };
-  if (assigneeId) where.assignee_id = parsePositiveInt(assigneeId);
+  const club = await ensureClubInTenant(tenantId, clubId);
+  const access = await clubAccess(tenantId, actorUserId, club.id);
+  if (!access.canRead) throw new ApiError(403, "CLUB_TASK_PERMISSION_DENIED", "只能查看所属社团的任务。");
+  const where = { tenant_id: tenantId, club_id: club.id };
+  if (assigneeId) Object.assign(where, assigneeWhere(parsePositiveInt(assigneeId)));
   if (status && ["pending", "in_progress", "completed"].includes(status)) where.status = status;
 
   return ClubTask.findAll({
@@ -83,15 +96,29 @@ async function listClubTasks({ tenantId, clubId, actorUserId, assigneeId, status
   });
 }
 
+function assigneeWhere(userId) {
+  return {
+    [Op.or]: [
+      { assignee_id: userId },
+      { assignee_ids: String(userId) },
+      { assignee_ids: { [Op.like]: `${userId},%` } },
+      { assignee_ids: { [Op.like]: `%,${userId},%` } },
+      { assignee_ids: { [Op.like]: `%,${userId}` } },
+    ],
+  };
+}
+
 async function listMyTasks({ tenantId, actorUserId }) {
-  const tasks = await ClubTask.findAll({
-    where: {
-      tenant_id: tenantId,
-      [Op.or]: [
-        { assignee_id: actorUserId },
-        { assignee_ids: { [Op.like]: `%${actorUserId}%` } },
-      ],
-    },
+  const where = { tenant_id: tenantId, ...assigneeWhere(actorUserId) };
+  if (!(await canManageCampus(tenantId, actorUserId))) {
+    const memberships = await ClubMember.findAll({
+      where: { tenant_id: tenantId, user_id: actorUserId },
+      attributes: ["club_id"],
+    });
+    where.club_id = memberships.map(({ club_id }) => club_id);
+  }
+  return ClubTask.findAll({
+    where,
     order: [["created_at", "DESC"]],
     include: [
       { model: Club, as: "club", attributes: ["id", "name"] },
@@ -99,14 +126,24 @@ async function listMyTasks({ tenantId, actorUserId }) {
       { model: User, as: "creator", attributes: ["id", "username", "email"] },
     ],
   });
-  return tasks;
 }
 
-async function getClubTask({ tenantId, clubId, taskId }) {
-  if (clubId) {
-    await ensureClubInTenant(tenantId, clubId);
+async function getClubTaskAccess({ tenantId, clubId, taskId, actorUserId }) {
+  const task = await ensureClubTask(tenantId, taskId);
+  if (clubId && parsePositiveInt(clubId) !== task.club_id) {
+    throw new ApiError(404, "CLUB_TASK_NOT_FOUND", "Club task not found in this club.");
   }
-  return ensureClubTask(tenantId, taskId);
+  const access = await clubAccess(tenantId, actorUserId, task.club_id);
+  const isAssignee = assignedTo(task, actorUserId);
+  if (!access.canRead) {
+    throw new ApiError(403, "CLUB_TASK_PERMISSION_DENIED", "无权访问此社团任务。");
+  }
+  return { task, canManage: access.canManage, isAssignee };
+}
+
+async function getClubTask(context) {
+  const { task } = await getClubTaskAccess(context);
+  return task;
 }
 
 async function createClubTask({ tenantId, clubId, actorUserId, payload }) {
@@ -130,7 +167,7 @@ async function createClubTask({ tenantId, clubId, actorUserId, payload }) {
   }
 
   for (const uid of allAssigneeIds) {
-    await ensureClubMember(tenantId, uid);
+    await ensureClubMember(tenantId, cid, uid);
   }
 
   await validateActivityIfProvided(tenantId, cid, payload.activity_id);
@@ -158,16 +195,10 @@ async function updateClubTask({ tenantId, clubId, actorUserId, taskId, payload }
     throw new ApiError(404, "CLUB_TASK_NOT_FOUND", "Club task not found in this club.");
   }
 
-  const isAssignee = task.assignee_id === actorUserId ||
-    parseAssigneeIds(task.assignee_ids).includes(actorUserId);
-  const isAdmin = await ClubMember.findOne({
-    where: { tenant_id: tenantId, club_id: cid, user_id: actorUserId, role: { [Op.in]: ["founder", "admin"] } },
-  });
-  const isGlobalAdmin = (await User.findByPk(actorUserId))?.role === "system_admin"
-    || (await User.findByPk(actorUserId))?.role === "platform_admin";
-
-  if (!isGlobalAdmin && !isAdmin && !isAssignee) {
-    throw new ApiError(403, "CLUB_TASK_PERMISSION_DENIED", "Only admin or assignee can update this task.");
+  const { canManage, canRead } = await clubAccess(tenantId, actorUserId, cid);
+  if (!canRead || (!canManage && (!assignedTo(task, actorUserId) ||
+      Object.keys(payload).some((field) => field !== "club_id" && field !== "status")))) {
+    throw new ApiError(403, "CLUB_TASK_PERMISSION_DENIED", "任务负责人只能更新任务状态。");
   }
 
   const updates = {};
@@ -193,7 +224,7 @@ async function updateClubTask({ tenantId, clubId, actorUserId, taskId, payload }
       throw new ApiError(400, "VALIDATION_ERROR", "At least one assignee is required.");
     }
     for (const uid of allIds) {
-      await ensureClubMember(tenantId, uid);
+      await ensureClubMember(tenantId, cid, uid);
     }
     updates.assignee_id = allIds[0];
     updates.assignee_ids = allIds.join(",");
@@ -234,4 +265,4 @@ async function deleteClubTask({ tenantId, clubId, actorUserId, taskId }) {
   await task.destroy();
 }
 
-module.exports = { listClubTasks, listMyTasks, getClubTask, createClubTask, updateClubTask, deleteClubTask };
+module.exports = { listClubTasks, listMyTasks, getClubTask, getClubTaskAccess, createClubTask, updateClubTask, deleteClubTask };

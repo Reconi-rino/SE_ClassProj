@@ -1,5 +1,6 @@
 const { Club, User, ClubMember, Activity } = require("../models");
 const { Sequelize } = require("sequelize");
+const publicActivityStatuses = ["approved", "completed"];
 
 async function listPublicClubs(req, res, next) {
   try {
@@ -22,7 +23,7 @@ async function listPublicClubs(req, res, next) {
     });
 
     const activityCounts = await Activity.findAll({
-      where: { tenant_id: tenantId, club_id: { [Sequelize.Op.in]: clubIds } },
+      where: { tenant_id: tenantId, club_id: { [Sequelize.Op.in]: clubIds }, status: publicActivityStatuses },
       attributes: ["club_id", [Sequelize.fn("COUNT", Sequelize.col("id")), "count"]],
       group: ["club_id"],
     });
@@ -64,9 +65,9 @@ async function getPublicClub(req, res, next) {
 
     const [memberCount, activityCount, recentActivities] = await Promise.all([
       ClubMember.count({ where: { tenant_id: tenantId, club_id: club.id } }),
-      Activity.count({ where: { tenant_id: tenantId, club_id: club.id } }),
+      Activity.count({ where: { tenant_id: tenantId, club_id: club.id, status: publicActivityStatuses } }),
       Activity.findAll({
-        where: { tenant_id: tenantId, club_id: club.id },
+        where: { tenant_id: tenantId, club_id: club.id, status: publicActivityStatuses },
         order: [["start_time", "DESC"]],
         limit: 5,
         attributes: ["id", "title", "status", "start_time", "location"],

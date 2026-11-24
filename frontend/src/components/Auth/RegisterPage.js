@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import FeedbackMessage from "../Common/FeedbackMessage";
 import { getUserFacingError } from "../../utils/errorMessage";
 import { fetchPublicTenants } from "../../services/tenantApi";
+import { setTenantCode } from "../../services/tenantStore";
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -41,7 +42,9 @@ function RegisterPage() {
     setError("");
     setSubmitting(true);
     try {
-      await register(form);
+      const tenant = tenants.find((item) => String(item.id) === form.tenant_id);
+      await register({ ...form, tenant_id: tenant?.id ?? null });
+      setTenantCode(tenant?.code);
       navigate("/admin", { replace: true });
     } catch (e) {
       setError(getUserFacingError(e, "注册失败，请检查输入后重试。"));
@@ -116,7 +119,7 @@ function RegisterPage() {
 
           <div className="form-group">
             <label htmlFor="tenant_id">所属学校/租户</label>
-            <select id="tenant_id" name="tenant_id" value={form.tenant_id} onChange={handleChange}>
+            <select id="tenant_id" name="tenant_id" value={form.tenant_id} onChange={handleChange} required>
               <option value="">-- 请选择 --</option>
               {tenants.map((t) => (
                 <option key={t.id} value={t.id}>

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import FeedbackMessage from "../Common/FeedbackMessage";
 import { getUserFacingError } from "../../utils/errorMessage";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { login } = useAuth();
   const [form, setForm] = useState({
     email: "",
@@ -25,7 +26,8 @@ function LoginPage() {
     setSubmitting(true);
     try {
       await login(form);
-      navigate("/admin", { replace: true });
+      const activityDestination = state?.from === "/activities" || state?.from === "/my-registrations";
+      navigate(activityDestination ? state.from : "/admin", { replace: true });
     } catch (e) {
       setError(getUserFacingError(e, "登录失败，请稍后重试。"));
     } finally {

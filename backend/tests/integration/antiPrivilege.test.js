@@ -137,7 +137,7 @@ describe("Anti-privilege integration tests", () => {
       });
 
     expect(response.status).toBe(403);
-    expect(response.body.code).toBe("APPROVAL_OWNERSHIP_DENIED");
+    expect(response.body.code).toBe("AUTHORIZATION_DENIED");
   });
 
   test("rejects cross-tenant club access", async () => {

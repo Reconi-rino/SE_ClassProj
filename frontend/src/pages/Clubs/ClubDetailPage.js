@@ -38,11 +38,11 @@ function ClubDetailPage() {
           <p className="page-header-sub">ID：{club?.id || "-"}</p>
         </div>
         <div className="actions-row">
-          <Link to={`/clubs/${id}/members`} className="btn btn-sm">
+          <Link to={`/admin/clubs/${id}/members`} className="btn btn-sm">
             <IconUsers size={14} />
             管理成员
           </Link>
-          <Link to="/clubs" className="btn btn-sm btn-outline">
+          <Link to="/admin/clubs" className="btn btn-sm btn-outline">
             返回列表
           </Link>
         </div>

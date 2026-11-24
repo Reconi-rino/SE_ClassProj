@@ -24,6 +24,7 @@ async function getClubTask(req, res, next) {
       tenantId: req.tenant.id,
       clubId: req.query.club_id,
       taskId: req.params.id,
+      actorUserId: req.user.id,
     });
     return res.status(200).json({ success: true, data: task });
   } catch (error) {

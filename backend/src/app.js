@@ -6,6 +6,7 @@ const sequelize = require("./config/database");
 const authRoutes = require("./routes/auth.routes");
 const businessRoutes = require("./routes/business.routes");
 const financialRoutes = require("./routes/financial.routes");
+const reimbursementRoutes = require("./routes/reimbursement.routes");
 const clubRoutes = require("./routes/club.routes");
 const tenantRoutes = require("./routes/tenant.routes");
 const todoRoutes = require("./routes/todo.routes");
@@ -13,6 +14,7 @@ const clubTaskRoutes = require("./routes/clubTask.routes");
 const publicRoutes = require("./routes/public.routes");
 const { resolveTenantContext } = require("./middleware/tenant.middleware");
 const { ensureDefaultAdmin } = require("./controllers/authController");
+const { UPLOAD_DIR } = require("./utils/upload");
 
 const PORT = process.env.PORT || 3001;
 
@@ -24,7 +26,7 @@ function createApp() {
   app.use(resolveTenantContext);
 
   // 静态文件服务：上传的文件
-  app.use("/uploads", express.static(path.resolve(__dirname, "..", "uploads")));
+  app.use("/uploads/avatars", express.static(path.join(UPLOAD_DIR, "avatars")));
 
   app.get("/api/health", (req, res) => {
     res.json({
@@ -37,6 +39,7 @@ function createApp() {
   app.use("/api/public", publicRoutes);
   app.use("/api/business", businessRoutes);
   app.use("/api/financial-records", financialRoutes);
+  app.use("/api/reimbursements", reimbursementRoutes);
   app.use("/api/clubs", clubRoutes);
   app.use("/api/tenants", tenantRoutes);
   app.use("/api/todos", todoRoutes);
