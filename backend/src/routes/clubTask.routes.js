@@ -74,8 +74,8 @@ function setTaskType(type) {
   return (req, res, next) => { req.params.taskType = type; next(); };
 }
 
-router.get("/:id/attachments", setTaskType("club"), authorize("read", "club_task"), attachmentController.listAttachments);
-router.post("/:id/attachments", setTaskType("club"), authorize("update", "club_task"), attachmentController.uploadFile);
-router.get("/:id/attachments/download", setTaskType("club"), authorize("read", "club_task"), attachmentController.downloadAttachments);
+router.get("/:id/attachments", setTaskType("club"), authorize("read", "club_task"), attachmentController.requireTaskAccess(), attachmentController.listAttachments);
+router.post("/:id/attachments", setTaskType("club"), authorize("update", "club_task"), attachmentController.requireTaskAccess(true), attachmentController.uploadFile);
+router.get("/:id/attachments/download", setTaskType("club"), authorize("read", "club_task"), attachmentController.requireTaskAccess(), attachmentController.downloadAttachments);
 
 module.exports = router;

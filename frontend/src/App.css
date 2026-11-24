@@ -157,6 +157,23 @@
 /* ===== Content Body ===== */
 .content-body { flex: 1; padding: 36px 40px; animation: fadeIn var(--duration-normal) var(--ease-apple); }
 .container { max-width: 1080px; margin: 0 auto; }
+.campus-activities { padding: 24px clamp(16px, 4vw, 48px) 64px; }
+.campus-activities-nav { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 32px; }
+.campus-activities-nav [aria-current="page"] { font-weight: 700; }
+.campus-activities-heading { flex-wrap: wrap; gap: 16px; }
+.campus-activities-heading select { width: auto; }
+.campus-activities-list { margin-top: 16px; }
+.campus-activity { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px 24px; }
+.campus-activity h2 { margin: 6px 0; }
+.campus-activity p { margin: 0; color: var(--color-text-secondary); }
+.campus-activity .campus-activity-description { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.campus-activity-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
+.reimbursement-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
+.reimbursement-card-heading { flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+.reimbursement-details { display: grid; gap: 10px; margin: 0 0 16px; }
+.reimbursement-details dt { font-size: 13px; color: var(--color-text-secondary); }
+.reimbursement-details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.reimbursement-decision { max-width: 520px; }
 
 /* ===== Page Header ===== */
 .page-header {

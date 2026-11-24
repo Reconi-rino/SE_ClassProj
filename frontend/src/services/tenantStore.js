@@ -1,7 +1,7 @@
 const TENANT_CODE_KEY = "ccms_tenant_code";
 
 export function getTenantCode() {
-  return localStorage.getItem(TENANT_CODE_KEY) || "";
+  return localStorage.getItem(TENANT_CODE_KEY) || "default";
 }
 
 export function setTenantCode(value) {

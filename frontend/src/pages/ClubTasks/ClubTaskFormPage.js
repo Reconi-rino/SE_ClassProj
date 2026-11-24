@@ -104,7 +104,8 @@ function ClubTaskFormPage() {
         club_id: Number(form.club_id),
         assignee_id: selectedAssigneeIds[0] || undefined,
         assignee_ids: selectedAssigneeIds.join(","),
-        activity_id: form.activity_id ? Number(form.activity_id) : undefined,
+        activity_id: form.activity_id ? Number(form.activity_id) : null,
+        due_date: form.due_date || null,
       };
       let result;
       if (isEdit) {

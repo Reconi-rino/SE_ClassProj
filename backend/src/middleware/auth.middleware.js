@@ -13,6 +13,14 @@ function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
+    const canReset = req.baseUrl === "/api/auth" && ["/me", "/reset-password"].includes(req.route?.path);
+    if (payload.forcePasswordReset && !canReset) {
+      return res.status(403).json({
+        success: false,
+        code: "PASSWORD_RESET_REQUIRED",
+        message: "请先重设密码。",
+      });
+    }
     req.user = payload;
     return next();
   } catch (error) {

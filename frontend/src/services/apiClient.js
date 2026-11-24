@@ -12,9 +12,10 @@ function buildQuery(params = {}) {
   return query ? `?${query}` : "";
 }
 
-export async function apiRequest(path, { method = "GET", token, tenantCode, body, query } = {}) {
+export async function apiRequest(path, { method = "GET", token, tenantCode, body, query, signal } = {}) {
   const response = await fetch(`${API_PREFIX}${path}${buildQuery(query)}`, {
     method,
+    signal,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

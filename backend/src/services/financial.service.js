@@ -1,11 +1,9 @@
 const { Op, fn, col, literal } = require("sequelize");
-const { FinancialRecord, Club, ClubMember, User } = require("../models");
+const { FinancialRecord, Club, ClubMember, TenantMembership, User } = require("../models");
 const { ApiError, parsePositiveInt } = require("../utils/common");
-const { tenantCreatePayload, tenantQueryOptions } = require("../utils/tenantGuard");
 const { logAuditEvent } = require("../utils/auditLogger");
 
 const RECORD_TYPES = new Set(["income", "expense"]);
-const PUBLIC_READ_GLOBAL_ROLES = new Set(["system_admin", "platform_admin"]);
 const WRITE_ALLOWED_GLOBAL_ROLES = new Set(["system_admin", "platform_admin", "club_admin"]);
 const CLUB_WRITER_ROLES = new Set(["founder", "admin"]);
 
@@ -30,22 +28,6 @@ function normalizeCategory(value) {
   const category = value.trim();
   if (!category || category.length > 100) return null;
   return category;
-}
-
-function parseMonth(value) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 12) return null;
-  return parsed;
-}
-
-function parseYear(value) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed < 1970 || parsed > 9999) return null;
-  return parsed;
-}
-
-function isGlobalPrivileged(userRole) {
-  return userRole === "system_admin" || userRole === "platform_admin";
 }
 
 async function ensureClub(tenantId, clubId) {
@@ -79,6 +61,10 @@ async function canWriteFinancial(tenantId, userId, clubId) {
   const user = await User.findByPk(userId);
   const actorGlobalRole = user?.role || null;
   if (WRITE_ALLOWED_GLOBAL_ROLES.has(actorGlobalRole)) return true;
+  const schoolAdmin = await TenantMembership.findOne({
+    where: { tenant_id: tenantId, user_id: userId, role: "tenant_admin" },
+  });
+  if (schoolAdmin) return true;
   const clubRole = await resolveClubRole(tenantId, userId, clubId);
   return CLUB_WRITER_ROLES.has(clubRole);
 }
@@ -200,6 +186,9 @@ async function updateFinancialRecord({ tenantId, actorUserId, id, body }) {
     throw new ApiError(403, "AUTHORIZATION_DENIED", "Access denied");
   }
 
+  if (existing.reimbursement_id) {
+    throw new ApiError(409, "REIMBURSEMENT_LEDGER_LOCKED", "报销生成的流水已关联审批记录，无法直接修改。");
+  }
   await existing.update({ ...validated });
 
   logAuditEvent({
@@ -229,6 +218,9 @@ async function deleteFinancialRecord({ tenantId, actorUserId, id }) {
     throw new ApiError(403, "AUTHORIZATION_DENIED", "Access denied");
   }
 
+  if (existing.reimbursement_id) {
+    throw new ApiError(409, "REIMBURSEMENT_LEDGER_LOCKED", "报销生成的流水已关联审批记录，无法直接删除。");
+  }
   await existing.destroy();
 
   logAuditEvent({

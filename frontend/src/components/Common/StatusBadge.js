@@ -1,6 +1,7 @@
 const MAP = {
   draft: { cls: "badge-gray", text: "草稿" },
   pending_approval: { cls: "badge-orange", text: "待审批" },
+  pending: { cls: "badge-orange", text: "待审批" },
   approved: { cls: "badge-green", text: "已批准" },
   rejected: { cls: "badge-red", text: "已驳回" },
   published: { cls: "badge-blue", text: "已发布" },

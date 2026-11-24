@@ -186,7 +186,7 @@ async function listClubMembers({ tenantId, clubId }) {
   };
 }
 
-async function joinClub({ tenantId, clubId, userId }) {
+async function joinClub({ tenantId, clubId, userId, role = "member" }) {
   const club = await ensureClub(tenantId, clubId);
   if (club.status !== "active") {
     throw new ApiError(409, "CLUB_NOT_JOINABLE", "Only active clubs can be joined.");
@@ -194,25 +194,20 @@ async function joinClub({ tenantId, clubId, userId }) {
 
   await ensureTenantMembership(tenantId, userId);
 
-  const existing = await ClubMember.findOne({
+  const [membership, created] = await ClubMember.findOrCreate({
     where: {
       tenant_id: tenantId,
       club_id: club.id,
       user_id: userId,
     },
+    defaults: { role, joined_at: new Date() },
   });
 
-  if (existing) {
+  if (!created) {
     throw new ApiError(409, "ALREADY_CLUB_MEMBER", "User is already a club member.");
   }
 
-  return ClubMember.create({
-    tenant_id: tenantId,
-    club_id: club.id,
-    user_id: userId,
-    role: "member",
-    joined_at: new Date(),
-  });
+  return membership;
 }
 
 async function leaveClub({ tenantId, clubId, userId }) {

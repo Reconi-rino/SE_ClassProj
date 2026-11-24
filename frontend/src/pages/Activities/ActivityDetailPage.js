@@ -8,6 +8,8 @@ import FeedbackMessage from "../../components/Common/FeedbackMessage";
 import LoadingState from "../../components/Common/LoadingState";
 import { getUserFacingError } from "../../utils/errorMessage";
 import { IconCheckCircle } from "../../components/Common/Icons";
+import RegistrationPanel from "./RegistrationPanel";
+import { cancelPublishedActivity } from "../../services/activityRegistrationApi";
 
 function ActivityDetailPage() {
   const { id } = useParams();
@@ -16,7 +18,9 @@ function ActivityDetailPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(true);
-  const [approverId, setApproverId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -31,23 +35,41 @@ function ActivityDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   const quickSet = async (status) => {
-    setError(""); setSuccess("");
+    setError(""); setSuccess(""); setBusy(true);
     try {
       await updateActivityStatus({ token, tenantCode: getTenantCode(), id, payload: { status } });
       setSuccess("状态更新成功");
       await load();
     } catch (e) { setError(getUserFacingError(e, "更新状态失败")); }
+    finally { setBusy(false); }
   };
 
   const handleSubmit = async () => {
-    setError(""); setSuccess("");
-    if (!approverId) { setError("请输入审批人的用户ID"); return; }
+    setError(""); setSuccess(""); setBusy(true);
     try {
-      await submitActivityApproval({ token, tenantCode: getTenantCode(), id, payload: { approver_id: Number(approverId), comments: "通过 UI 提交审批" } });
+      await submitActivityApproval({ token, tenantCode: getTenantCode(), id, payload: {} });
       setSuccess("审批请求已提交");
-      await load(); setApproverId("");
+      await load();
     } catch (e) { setError(getUserFacingError(e, "提交审批失败")); }
+    finally { setBusy(false); }
   };
+
+  async function handleCancellation(event) {
+    event.preventDefault();
+    setError(""); setSuccess(""); setBusy(true);
+    try {
+      await cancelPublishedActivity({ token, tenantCode: getTenantCode(), id, reason });
+      setCancelling(false);
+      setReason("");
+      setSuccess("活动已取消，已报名学生可在「我的报名」查看通知。");
+      await load();
+    } catch (failure) {
+      setError(getUserFacingError(failure, "取消活动失败"));
+    } finally { setBusy(false); }
+  }
+
+  const hasStarted = activity && new Date(activity.start_time).getTime() <= Date.now();
+  const hasEnded = activity && new Date(activity.end_time || activity.start_time).getTime() <= Date.now();
 
   return (
     <div className="container">
@@ -57,8 +79,8 @@ function ActivityDetailPage() {
           <p className="page-header-sub">ID：{activity?.id || "-"}</p>
         </div>
         <div className="actions-row">
-          <Link to="/approvals" className="btn btn-sm"><IconCheckCircle size={14} /> 审批页面</Link>
-          <Link to="/activities" className="btn btn-sm btn-outline">返回列表</Link>
+          {activity?.can_review && <Link to="/admin/approvals" className="btn btn-sm"><IconCheckCircle size={14} /> 审批页面</Link>}
+          <Link to="/admin/activities" className="btn btn-sm btn-outline">返回列表</Link>
         </div>
       </div>
 
@@ -101,16 +123,40 @@ function ActivityDetailPage() {
               <span className="detail-item-label">描述</span>
               <span className="detail-item-value">{activity.description || "暂无描述"}</span>
             </div>
+            {activity.review_comment && <p className="feedback feedback-warning">驳回原因：{activity.review_comment}</p>}
+            {activity.cancellation_reason && <p className="feedback feedback-warning">取消原因：{activity.cancellation_reason}</p>}
           </div>
 
-          <div className="card">
-            <div className="card-header"><h3 className="card-title">操作面板</h3></div>
-            <div className="inline-form wrap">
-              <input placeholder="审批人用户 ID" value={approverId} onChange={(e) => setApproverId(e.target.value)} style={{ maxWidth: 170 }} />
-              <button type="button" onClick={handleSubmit}>提交审批</button>
-              <button type="button" className="btn-outline" onClick={() => quickSet("completed")}>标记为已完成</button>
+          {activity.can_manage && (
+            <div className="card">
+              <div className="card-header"><h3 className="card-title">操作面板</h3></div>
+              <div className="inline-form wrap">
+                {activity.status === "draft" && <button type="button" disabled={busy} onClick={handleSubmit}>提交审批</button>}
+                {activity.status === "rejected" && <button type="button" disabled={busy} onClick={() => quickSet("draft")}>恢复为草稿</button>}
+                {activity.status === "approved" && !hasStarted && !cancelling &&
+                  <button type="button" className="btn-outline" disabled={busy} onClick={() => setCancelling(true)}>取消活动</button>}
+                {activity.status === "approved" && hasEnded &&
+                  <button type="button" className="btn-outline" disabled={busy} onClick={() => quickSet("completed")}>标记为已完成</button>}
+                {activity.status === "pending_approval" && <p>等待审批</p>}
+                {activity.status === "completed" && <p>活动已完成</p>}
+              </div>
+              {activity.status === "approved" && cancelling && !hasStarted && (
+                <form className="auth-form" onSubmit={handleCancellation}>
+                  <div className="form-group">
+                    <label htmlFor="activity-cancellation-reason">取消原因</label>
+                    <textarea id="activity-cancellation-reason" value={reason} maxLength={500} rows={3}
+                      onChange={(event) => setReason(event.target.value)} required />
+                  </div>
+                  <p className="hint">取消后停止报名并保留原名单，原因会发送给已报名学生。</p>
+                  <div className="actions-row">
+                    <button type="submit" className="btn-danger" disabled={busy || !reason.trim()}>确认取消活动</button>
+                    <button type="button" className="btn-outline" disabled={busy} onClick={() => setCancelling(false)}>返回</button>
+                  </div>
+                </form>
+              )}
             </div>
-          </div>
+          )}
+          {activity.can_manage && <RegistrationPanel key={activity.id} activity={activity} token={token} tenantCode={getTenantCode()} />}
         </>
       ) : null}
     </div>

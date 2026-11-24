@@ -37,6 +37,7 @@ const FinancialRecord = sequelize.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
+    reimbursement_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, unique: true },
     created_by: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,

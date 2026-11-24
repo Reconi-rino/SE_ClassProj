@@ -37,6 +37,12 @@ const Activity = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    registration_capacity: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
+    },
+    cancellation_reason: { type: DataTypes.STRING(500), allowNull: true },
+    cancelled_at: { type: DataTypes.DATE, allowNull: true },
     status: {
       type: DataTypes.ENUM(
         "draft",

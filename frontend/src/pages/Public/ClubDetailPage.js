@@ -3,22 +3,65 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiRequest } from "../../services/apiClient";
 import { getTenantCode } from "../../services/tenantStore";
+import { addClubMember, leaveClub, listClubMembers } from "../../services/businessApi";
+import FeedbackMessage from "../../components/Common/FeedbackMessage";
+import { getUserFacingError } from "../../utils/errorMessage";
 
 function ClubDetailPage() {
   const { id } = useParams();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, token, user, logout } = useAuth();
+  const userId = user?.id;
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState(null);
+  const [membershipLoading, setMembershipLoading] = useState(false);
+  const [membershipError, setMembershipError] = useState("");
+  const [membershipMessage, setMembershipMessage] = useState("");
+  const tenantCode = getTenantCode();
 
   const load = useCallback(async () => {
     try {
-      const result = await apiRequest(`/public/clubs/${id}`, { tenantCode: getTenantCode() || "default" });
+      const result = await apiRequest(`/public/clubs/${id}`, { tenantCode });
       setClub(result?.data || null);
     } catch { setClub(null); }
     finally { setLoading(false); }
-  }, [id]);
+  }, [id, tenantCode]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let active = true;
+    setMembershipLoading(true);
+    setRole(null);
+    setMembershipError("");
+    setMembershipMessage("");
+    listClubMembers({ token, tenantCode, clubId: id })
+      .then(({ data }) => {
+        if (active) setRole(data.members.find(({ user_id }) => user_id === userId)?.role || null);
+      })
+      .catch(() => { if (active) setMembershipError("无法读取当前学校的成员身份。"); })
+      .finally(() => { if (active) setMembershipLoading(false); });
+    return () => { active = false; };
+  }, [id, isAuthenticated, token, tenantCode, userId]);
+
+  async function changeMembership() {
+    const leaving = Boolean(role);
+    setMembershipLoading(true);
+    setMembershipError("");
+    setMembershipMessage("");
+    const action = leaving ? leaveClub : addClubMember;
+    try {
+      await action({ token, tenantCode, clubId: id });
+      setRole(leaving ? null : "member");
+      setMembershipMessage(leaving ? "已退出社团。" : "已加入社团。");
+      await load();
+    } catch (error) {
+      setMembershipError(getUserFacingError(error, "操作失败，请稍后重试。"));
+    } finally {
+      setMembershipLoading(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -178,6 +221,9 @@ function ClubDetailPage() {
           <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 16 }}>
             近期活动
           </h2>
+          <Link to={`/activities?club_id=${club.id}`} className="btn btn-sm btn-outline" style={{ marginBottom: 16 }}>
+            查看本社团的可报名活动
+          </Link>
           {club.recent_activities && club.recent_activities.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {club.recent_activities.map((act) => (
@@ -225,14 +271,13 @@ function ClubDetailPage() {
           <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "#fff" }}>
             对 {club.name} 感兴趣？
           </h3>
-          <p style={{ fontSize: 14, opacity: 0.85, marginBottom: 24 }}>
-            注册账号即可申请加入
-          </p>
-          <Link to="/register" style={{
-            display: "inline-block", background: "#fff", color: "#667eea",
-            textDecoration: "none", padding: "12px 32px",
-            borderRadius: 8, fontSize: 15, fontWeight: 700,
-          }}>立即加入</Link>
+          <FeedbackMessage message={membershipError} />
+          <FeedbackMessage message={membershipMessage} type="success" />
+          {!isAuthenticated ? <Link to="/register" className="btn">注册后加入</Link> :
+            role === "founder" ? <Link to={`/admin/clubs/${id}`} className="btn">管理社团</Link> :
+            <button type="button" disabled={membershipLoading} onClick={changeMembership}>
+              {role ? "退出社团" : "加入社团"}
+            </button>}
         </div>
       </div>
 

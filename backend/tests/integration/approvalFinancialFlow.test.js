@@ -21,7 +21,7 @@ describe("Approval and financial integration flow", () => {
     });
 
     await addTenantMembership(tenant, founder, "tenant_admin");
-    await addTenantMembership(tenant, approver, "member");
+    await addTenantMembership(tenant, approver, "tenant_admin");
     const club = await createClub({ tenant, founder, name: "Flow Club" });
     await db.ClubMember.create({
       tenant_id: tenant.id,

@@ -258,10 +258,14 @@ server {
         proxy_pass_request_headers on;
     }
 
-    location /uploads/ {
-        alias /home/ccms/ccms/backend/uploads/;
+    location /uploads/avatars/ {
+        alias /home/ccms/ccms/backend/uploads/avatars/;
         expires 7d;
         add_header Cache-Control "public";
+    }
+
+    location /uploads/ {
+        return 404;
     }
 
     location / {

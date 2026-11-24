@@ -10,18 +10,18 @@ const roleLabels = {
 };
 
 const statCards = [
-  { to: "/clubs", label: "社团管理", sub: "浏览与管理社团信息", icon: IconBuilding, color: "brand" },
-  { to: "/activities", label: "活动管理", sub: "创建与跟踪活动状态", icon: IconCalendar, color: "green" },
-  { to: "/approvals", label: "审批中心", sub: "处理活动审批请求", icon: IconCheckCircle, color: "amber" },
-  { to: "/finance", label: "财务管理", sub: "收支记录与统计报表", icon: IconDollar, color: "sky" },
+  { to: "/admin/clubs", label: "社团管理", sub: "浏览与管理社团信息", icon: IconBuilding, color: "brand" },
+  { to: "/admin/activities", label: "活动管理", sub: "创建与跟踪活动状态", icon: IconCalendar, color: "green" },
+  { to: "/admin/approvals", label: "审批中心", sub: "处理活动审批请求", icon: IconCheckCircle, color: "amber" },
+  { to: "/admin/finance", label: "财务管理", sub: "收支记录与统计报表", icon: IconDollar, color: "sky" },
 ];
 
 const quickLinks = [
-  { to: "/clubs", label: "社团管理", icon: IconBuilding },
-  { to: "/activities", label: "活动管理", icon: IconCalendar },
-  { to: "/approvals", label: "审批中心", icon: IconCheckCircle },
-  { to: "/finance", label: "财务仪表盘", icon: IconDollar },
-  { to: "/finance/public", label: "财务公开页", icon: IconEye },
+  { to: "/admin/clubs", label: "社团管理", icon: IconBuilding },
+  { to: "/admin/activities", label: "活动管理", icon: IconCalendar },
+  { to: "/admin/approvals", label: "审批中心", icon: IconCheckCircle },
+  { to: "/admin/finance", label: "财务仪表盘", icon: IconDollar },
+  { to: "/admin/finance/public", label: "财务公开页", icon: IconEye },
 ];
 
 function DashboardPage() {

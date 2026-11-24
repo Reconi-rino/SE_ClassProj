@@ -10,14 +10,14 @@ import { IconUsers, IconTrash } from "../../components/Common/Icons";
 
 const ROLE_OPTS = [
   { value: "member", label: "普通成员" },
-  { value: "officer", label: "干事" },
-  { value: "club_admin", label: "社团管理员" },
+  { value: "admin", label: "社团管理员" },
 ];
 
 function ClubMembersPage() {
   const { clubId } = useParams();
   const { token } = useAuth();
   const [members, setMembers] = useState([]);
+  const [canManage, setCanManage] = useState(false);
   const [form, setForm] = useState({ user_id: "", role: "member" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,7 +27,8 @@ function ClubMembersPage() {
     setLoading(true); setError("");
     try {
       const result = await listClubMembers({ token, tenantCode: getTenantCode(), clubId });
-      setMembers(Array.isArray(result?.data) ? result.data : []);
+      setMembers(result?.data?.members || []);
+      setCanManage(Boolean(result?.data?.can_manage));
     } catch (e) {
       setError(getUserFacingError(e, "加载社团成员失败"));
     } finally { setLoading(false); }
@@ -63,7 +64,7 @@ function ClubMembersPage() {
     } catch (er) { setError(getUserFacingError(er, "移除成员失败")); }
   };
 
-  const roleLabel = (r) => (ROLE_OPTS.find((o) => o.value === r) || {}).label || r;
+  const roleLabel = (r) => r === "founder" ? "会长" : ROLE_OPTS.find((o) => o.value === r)?.label || r;
 
   return (
     <div className="container">
@@ -73,12 +74,12 @@ function ClubMembersPage() {
           <p className="page-header-sub">社团 ID：{clubId}</p>
         </div>
         <div className="actions-row">
-          <Link to={`/clubs/${clubId}`} className="btn btn-sm"><IconUsers size={14} /> 社团详情</Link>
-          <Link to="/clubs" className="btn btn-sm btn-outline">社团列表</Link>
+          <Link to={`/admin/clubs/${clubId}`} className="btn btn-sm"><IconUsers size={14} /> 社团详情</Link>
+          <Link to="/admin/clubs" className="btn btn-sm btn-outline">社团列表</Link>
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 20 }}>
+      {canManage && <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header"><h3 className="card-title">添加成员</h3></div>
         <form className="inline-form wrap" onSubmit={handleAdd}>
           <div className="form-group">
@@ -93,7 +94,7 @@ function ClubMembersPage() {
           </div>
           <button type="submit" style={{ alignSelf: "flex-end" }}>添加成员</button>
         </form>
-      </div>
+      </div>}
 
       <FeedbackMessage message={error} />
       <FeedbackMessage message={success} type="success" duration={3000} />
@@ -107,7 +108,7 @@ function ClubMembersPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>成员 ID</th><th>用户 ID</th><th>角色</th><th style={{ width: 260 }}>操作</th>
+                <th>成员 ID</th><th>用户 ID</th><th>用户名</th><th>角色</th>{canManage && <th style={{ width: 260 }}>操作</th>}
               </tr>
             </thead>
             <tbody>
@@ -115,14 +116,16 @@ function ClubMembersPage() {
                 <tr key={m.id}>
                   <td className="cell-mono">{m.id}</td>
                   <td className="cell-mono">{m.user_id}</td>
+                  <td>{m.user?.username}</td>
                   <td><span className="tag">{roleLabel(m.role)}</span></td>
-                  <td>
-                    <div className="actions-row">
-                      <button className="btn-sm" onClick={() => handleRole(m.id, "member")}>设为成员</button>
-                      <button className="btn-sm" onClick={() => handleRole(m.id, "officer")}>设为干事</button>
+                  {canManage && <td>
+                    {m.role !== "founder" && <div className="actions-row">
+                      {m.role === "admin" ?
+                        <button className="btn-sm" onClick={() => handleRole(m.id, "member")}>设为成员</button> :
+                        <button className="btn-sm" onClick={() => handleRole(m.id, "admin")}>设为管理员</button>}
                       <button className="btn-sm btn-danger" onClick={() => handleRemove(m.id)}><IconTrash size={12} /> 移除</button>
-                    </div>
-                  </td>
+                    </div>}
+                  </td>}
                 </tr>
               ))}
             </tbody>

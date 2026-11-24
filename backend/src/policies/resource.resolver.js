@@ -63,11 +63,20 @@ async function resolveScopedClubForResource(resource, req) {
     if (clubId) return Club.findByPk(clubId);
     return null;
   }
-  if (resource === "activity" || resource === "approval") {
+  if (resource === "activity") {
     return resolveClubFromActivity(req);
+  }
+  if (resource === "approval") {
+    return resolveClubFromApproval(req);
   }
   if (resource === "financial_record") {
     return resolveClubFromFinancialRecord(req);
+  }
+  if (resource === "club_task") {
+    const id = parsePositiveInt(req.params?.id);
+    const task = id ? await ClubTask.findByPk(id) : null;
+    const clubId = id ? task?.club_id : parsePositiveInt(req.body?.club_id);
+    return clubId ? Club.findByPk(clubId) : null;
   }
   return null;
 }

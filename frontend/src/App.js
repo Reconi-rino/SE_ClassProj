@@ -3,6 +3,7 @@ import "./App.css";
 import { useAuth } from "./contexts/AuthContext";
 import HomePage from "./pages/Public/HomePage";
 import PublicClubDetailPage from "./pages/Public/ClubDetailPage";
+import CampusActivitiesPage from "./pages/Public/CampusActivitiesPage";
 import LoginPage from "./components/Auth/LoginPage";
 import RegisterPage from "./components/Auth/RegisterPage";
 import ResetPasswordPage from "./components/Auth/ResetPasswordPage";
@@ -20,6 +21,7 @@ import ApprovalPage from "./pages/Activities/ApprovalPage";
 import FinancialDashboardPage from "./pages/Finance/FinancialDashboardPage";
 import FinancialFormPage from "./pages/Finance/FinancialFormPage";
 import FinancialPublicPage from "./pages/Finance/FinancialPublicPage";
+import ReimbursementsPage from "./pages/Finance/ReimbursementsPage";
 import TodoListPage from "./pages/Todos/TodoListPage";
 import ClubTaskListPage from "./pages/ClubTasks/ClubTaskListPage";
 import ClubTaskFormPage from "./pages/ClubTasks/ClubTaskFormPage";
@@ -35,6 +37,8 @@ function App() {
           {/* 公开页面 — 无需登录 */}
           <Route path="/" element={<HomePage />} />
           <Route path="/club/:id" element={<PublicClubDetailPage />} />
+          <Route path="/activities" element={<CampusActivitiesPage />} />
+          <Route path="/my-registrations" element={<CampusActivitiesPage mine />} />
           <Route path="/login" element={isAuthenticated ? <Navigate to="/admin" replace /> : <LoginPage />} />
           <Route path="/register" element={isAuthenticated ? <Navigate to="/admin" replace /> : <RegisterPage />} />
 
@@ -57,6 +61,7 @@ function App() {
             <Route path="/admin/approvals" element={<ApprovalPage />} />
             <Route path="/admin/finance" element={<FinancialDashboardPage />} />
             <Route path="/admin/finance/new" element={<FinancialFormPage />} />
+            <Route path="/admin/finance/reimbursements" element={<ReimbursementsPage />} />
             <Route path="/admin/finance/public" element={<FinancialPublicPage />} />
             <Route path="/admin/todos" element={<TodoListPage />} />
             <Route path="/admin/club-tasks" element={<ClubTaskListPage />} />

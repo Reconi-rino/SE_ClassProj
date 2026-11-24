@@ -9,7 +9,10 @@ import { getUserFacingError } from "../../utils/errorMessage";
 function ActivityFormPage() {
   const { token } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ title: "", description: "", club_id: "", location: "", start_time: "", end_time: "", status: "draft" });
+  const [form, setForm] = useState({
+    title: "", description: "", club_id: "", location: "",
+    start_time: "", end_time: "", registration_capacity: "",
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,7 +25,17 @@ function ActivityFormPage() {
     e.preventDefault();
     setSubmitting(true); setError("");
     try {
-      const result = await createActivity({ token, tenantCode: getTenantCode(), payload: { ...form, club_id: Number(form.club_id) } });
+      const result = await createActivity({
+        token,
+        tenantCode: getTenantCode(),
+        payload: {
+          ...form,
+          club_id: Number(form.club_id),
+          start_time: new Date(form.start_time).toISOString(),
+          end_time: form.end_time ? new Date(form.end_time).toISOString() : null,
+          registration_capacity: form.registration_capacity ? Number(form.registration_capacity) : null,
+        },
+      });
       navigate(`/admin/activities/${result?.data?.id || ""}`);
     } catch (er) {
       setError(getUserFacingError(er, "创建活动失败，请检查输入后重试。"));
@@ -33,7 +46,7 @@ function ActivityFormPage() {
     <div className="container">
       <div className="page-header">
         <h2>创建活动</h2>
-        <Link to="/activities" className="btn btn-sm btn-outline">返回列表</Link>
+        <Link to="/admin/activities" className="btn btn-sm btn-outline">返回列表</Link>
       </div>
 
       <div className="card" style={{ maxWidth: 680 }}>
@@ -60,7 +73,7 @@ function ActivityFormPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="form-group">
               <label htmlFor="start_time">开始时间</label>
-              <input id="start_time" name="start_time" type="datetime-local" value={form.start_time} onChange={handleChange} />
+              <input id="start_time" name="start_time" type="datetime-local" value={form.start_time} onChange={handleChange} required />
             </div>
             <div className="form-group">
               <label htmlFor="end_time">结束时间</label>
@@ -68,11 +81,9 @@ function ActivityFormPage() {
             </div>
           </div>
           <div className="form-group">
-            <label htmlFor="status">初始状态</label>
-            <select id="status" name="status" value={form.status} onChange={handleChange}>
-              <option value="draft">草稿</option>
-              <option value="pending_approval">直接提交审批</option>
-            </select>
+            <label htmlFor="registration_capacity">报名名额</label>
+            <input id="registration_capacity" name="registration_capacity" type="number" min="1" max="10000"
+              value={form.registration_capacity} onChange={handleChange} placeholder="留空则不开放报名" />
           </div>
           <button type="submit" disabled={submitting}>{submitting ? "创建中..." : "创建活动"}</button>
         </form>

@@ -22,6 +22,9 @@ async function listActivities(req, res, next) {
       tenantId: req.tenant.id,
       actorUserId: req.user.id,
       status: req.query.status,
+      clubId: req.query.clubId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
       userRole: req.user.role,
     });
     return res.status(200).json({ success: true, data: activities });
@@ -96,7 +99,6 @@ async function listPendingApprovals(req, res, next) {
       tenantId: req.tenant.id,
       actorUserId: req.user.id,
       status: req.query.status,
-      userRole: req.user.role,
     });
     return res.status(200).json({ success: true, data: approvals });
   } catch (error) {
@@ -113,7 +115,6 @@ async function decideApproval(req, res, next) {
       approvalId: req.params.id,
       decision: req.body.decision,
       comments: req.body.comments,
-      userRole: req.user.role,
     });
     return res.status(200).json({
       success: true,

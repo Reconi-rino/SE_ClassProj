@@ -306,11 +306,19 @@ async function ensureDefaultAdmin() {
   }
 }
 
-function me(req, res) {
-  return res.status(200).json({
-    success: true,
-    data: req.user,
-  });
+async function me(req, res, next) {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ["id", "username", "email", "role", "student_id", "force_password_reset", "avatar_url"],
+    });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    return res.status(200).json({
+      success: true,
+      data: { ...user.toJSON(), forcePasswordReset: Boolean(user.force_password_reset) },
+    });
+  } catch (error) {
+    return next(error);
+  }
 }
 
 function uploadAvatar(req, res) {
@@ -332,20 +340,6 @@ function uploadAvatar(req, res) {
     });
   });
 }
-
-// Enhance me() to return avatar_url from DB
-const _me = me;
-me = async function (req, res) {
-  try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: ["id", "username", "email", "role", "student_id", "force_password_reset", "avatar_url"],
-    });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-    return res.status(200).json({ success: true, data: user });
-  } catch {
-    return _me(req, res);
-  }
-};
 
 module.exports = {
   register,

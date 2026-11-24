@@ -19,9 +19,9 @@ function FinancialDashboardPage() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const tenantCode = getTenantCode();
+      const tenantCode = getTenantCode() || "default";
       const [recordsResult, reportResult] = await Promise.all([
-        listFinancialRecords({ token, tenantCode }),
+        listFinancialRecords({ token, tenantCode, year }),
         getFinancialReports({ token, tenantCode, year }),
       ]);
       setRecords(Array.isArray(recordsResult?.data) ? recordsResult.data : []);
@@ -35,7 +35,7 @@ function FinancialDashboardPage() {
   useEffect(() => { load(); }, [load]);
 
   const summary = useMemo(() => {
-    if (report) return { income: report.total_income || 0, expense: report.total_expense || 0 };
+    if (report?.totals) return report.totals;
     return records.reduce((acc, item) => {
       const amount = Number(item.amount || 0);
       if (item.type === "income") acc.income += amount;
@@ -45,7 +45,7 @@ function FinancialDashboardPage() {
   }, [records, report]);
 
   const balance = summary.income - summary.expense;
-  const monthlyRows = Array.isArray(report?.monthly_breakdown) ? report.monthly_breakdown : [];
+  const monthlyRows = Array.isArray(report?.monthly) ? report.monthly : [];
 
   return (
     <div className="container">
@@ -55,6 +55,7 @@ function FinancialDashboardPage() {
           <p className="page-header-sub">收支总览与月度统计</p>
         </div>
         <div className="actions-row">
+          <Link to="/admin/finance/reimbursements" className="btn btn-sm btn-outline">经费报销</Link>
           <Link to="/admin/finance/new" className="btn btn-sm"><IconPlus size={14} /> 新增流水</Link>
           <Link to="/admin/finance/public" className="btn btn-sm btn-outline"><IconEye size={14} /> 公开页</Link>
         </div>
@@ -105,10 +106,10 @@ function FinancialDashboardPage() {
                     <tr><th>月份</th><th>收入</th><th>支出</th><th>结余</th></tr>
                   </thead>
                   <tbody>
-                    {monthlyRows.map((item, idx) => {
+                    {monthlyRows.map((item) => {
                       const mb = (item.income || 0) - (item.expense || 0);
                       return (
-                        <tr key={idx}>
+                        <tr key={item.month}>
                           <td className="cell-strong">{item.month}</td>
                           <td className="cell-mono" style={{ color: "var(--green-600)" }}>{item.income.toLocaleString()}</td>
                           <td className="cell-mono" style={{ color: "var(--red-600)" }}>{item.expense.toLocaleString()}</td>
@@ -128,7 +129,7 @@ function FinancialDashboardPage() {
               <div className="table-wrap">
                 <table className="table">
                   <thead>
-                    <tr><th>ID</th><th>社团</th><th>类型</th><th>分类</th><th>金额</th><th>日期</th></tr>
+                    <tr><th>ID</th><th>社团</th><th>类型</th><th>分类</th><th>金额</th><th>日期</th><th>来源</th></tr>
                   </thead>
                   <tbody>
                     {records.map((item) => (
@@ -144,6 +145,7 @@ function FinancialDashboardPage() {
                         <td>{item.category || "-"}</td>
                         <td className="cell-mono cell-strong" style={{ color: item.type === "income" ? "var(--green-600)" : "var(--red-600)" }}>{Number(item.amount).toLocaleString()}</td>
                         <td style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>{item.transaction_date || "-"}</td>
+                        <td>{item.reimbursement_id ? `报销单 #${item.reimbursement_id}` : "手工录入"}</td>
                       </tr>
                     ))}
                   </tbody>

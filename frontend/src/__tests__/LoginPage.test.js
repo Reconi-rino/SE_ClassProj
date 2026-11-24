@@ -35,7 +35,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "登录" }));
 
     await waitFor(() => expect(mockLogin).toHaveBeenCalledWith({ email: "test@example.com", password: "Passw0rd!" }));
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true }));
   });
 
   it("renders user-facing error on failure", async () => {
@@ -51,5 +51,19 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "登录" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("邮箱或密码错误");
+  });
+
+  it("returns students to the activity plaza after sign-in", async () => {
+    mockLogin.mockResolvedValue({ data: {} });
+    render(
+      <MemoryRouter initialEntries={[{ pathname: "/login", state: { from: "/activities" } }]}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+    fireEvent.change(screen.getByLabelText("邮箱"), { target: { value: "student@example.com" } });
+    fireEvent.change(screen.getByLabelText("密码"), { target: { value: "Passw0rd!" } });
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/activities", { replace: true }));
   });
 });

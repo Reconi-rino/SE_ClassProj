@@ -175,7 +175,8 @@ function HomePage() {
             }}>C</div>
             <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.02em" }}>CCMS</span>
           </Link>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <Link to="/activities" style={{ color: "var(--blue)", fontWeight: 600 }}>社区广场</Link>
             {isAuthenticated ? (
               <>
                 <Link to="/admin" style={{ color: "var(--color-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 16px", borderRadius: 8 }}>管理后台</Link>

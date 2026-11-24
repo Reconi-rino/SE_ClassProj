@@ -1,5 +1,5 @@
 const express = require("express");
-const { body, param, query } = require("express-validator");
+const { body, param } = require("express-validator");
 const { requireAuth } = require("../middleware/auth.middleware");
 const { requireTenantContext } = require("../middleware/tenant.middleware");
 const { authorize } = require("../middleware/authorize.middleware");
@@ -45,8 +45,8 @@ const attachmentController = require("../controllers/attachmentController");
 function setTaskType(type) {
   return (req, res, next) => { req.params.taskType = type; next(); };
 }
-router.get("/:id/attachments", setTaskType("personal"), attachmentController.listAttachments);
-router.post("/:id/attachments", setTaskType("personal"), attachmentController.uploadFile);
-router.get("/:id/attachments/download", setTaskType("personal"), attachmentController.downloadAttachments);
+router.get("/:id/attachments", setTaskType("personal"), attachmentController.requireTaskAccess(), attachmentController.listAttachments);
+router.post("/:id/attachments", setTaskType("personal"), attachmentController.requireTaskAccess(true), attachmentController.uploadFile);
+router.get("/:id/attachments/download", setTaskType("personal"), attachmentController.requireTaskAccess(), attachmentController.downloadAttachments);
 
 module.exports = router;
